@@ -25,19 +25,21 @@ K vizualizaci byly použity nástroje:
 
 Používání programu
 ------------------
+# DP_process_data.py
+
 V případě prvního skriptu, tedy "DP_process_data.py", se volá funkce zpracuj_složku() pro vygenerování indikátorů a metadat všech souborů umístěných do vstupního adresáře.
 Také je možné využít funkci zpracuj_soubor(), která vygeneruje data pouze pro jeden konkrétní soubor ve vstupním adresáři, jehož cesta se musí uvést jako argument funkce.
 
-funkce "zpracuj_složku()" a i "zpracuj_soubor()" disponuje následujícími argumenty:
-cesta_ke_slozce  --> cesta ke složce, kde jsou uložená data ve formátu Endnote
-altmetrics_on	--> vypínač a zapínač Altmetrics.com api. Pokud je True, stahuje to z tohoto api data
-plumX_on	--> vypínač a zapínač PlumX api. Pokud je True, stahuje to z tohoto api data
-nazev_generovaneho_souboru --> název csv souboru, který bude vygenerován
-start_from = 0 --> v případě že je potřeba začít procesovat data až od určitého záznamu (vhodné, pokud se v půlce zpracování přeruší a je nutné skript spustit znovu, nastaví se přímo záznam ve kterém to může rovnou začít a přeskočit to k němu)
+## funkce "zpracuj_složku()" a i "zpracuj_soubor()" disponuje následujícími argumenty:
+* cesta_ke_slozce  --> cesta ke složce, kde jsou uložená data ve formátu Endnote
+* altmetrics_on	--> vypínač a zapínač Altmetrics.com api. Pokud je True, stahuje to z tohoto api data
+* plumX_on	--> vypínač a zapínač PlumX api. Pokud je True, stahuje to z tohoto api data
+* nazev_generovaneho_souboru --> název csv souboru, který bude vygenerován
+* start_from = 0 --> v případě že je potřeba začít procesovat data až od určitého záznamu (vhodné, pokud se v půlce zpracování přeruší a je nutné skript spustit znovu, nastaví se přímo záznam ve kterém to může rovnou začít a přeskočit to k němu)
 
 Výstupem tohoto skriptu je log soubor a csv soubor. 
 
-CSV soubor má následující sloupce
+### CSV soubor má následující sloupce
 
 * #list_AF                ->  seznam autorů, získané z pole AF (nepoužívá se)
 * pocet_autoru            ->  počet autorů; zjištěn počet položek v poli "list_AF"
@@ -79,53 +81,54 @@ CSV soubor má následující sloupce
 
 V souboru log je možné vyčíst datum a čas zpracování každého jednotlivého záznamu; název zdrojového souboru, ze kterého daný záznam pochází; pořadí záznamu; DOI záznamu; a počet, kolik záznamů zatím nemělo k dispozici DOI a nemohly být tak zpracovány
 
+# DP_analyze_data.py
 
 V případě skriptu druhého, s názvem "DP_analyze_data.py" se pro jeho správné fungování volají následující funkce:
 
-zjisti_korelaci() - výstupem je vytisklá tabulka a graf
------------------
-*data => naimportované data, csv soubor vygenerovaný z předchozího scriptu
-*sloupec_A a sloupec_B => sloupce z dataframu, kde se hledají závislost - musí se jednat o indikátory
-*typ korelace => 'spearman' 'pearson' 'kendall' (pro kendall typ není naprogramovaná vizualizace)
-*vizualizace => True False #generuje graf*
-*group_by = které hodnoty má seskupovat - vypočítá korelaci pro každou kategorii - pokud je vizualizace zapnuta, vytvoří graf pro každou kategorii
-*minimum_clanku => používá se pouze v případě kdy group_by argument je využívaný. Říká, jaké procento dokumentů musí obsahovat kategorie, aby byla brána v potaz (například nemá cenu vykreslovat ty kategorie, do kterých spadájí jen 4 články, nemají pak výpovědní hodnotu)
+## zjisti_korelaci() - výstupem je vytisklá tabulka a graf
+
+* data => naimportované data, csv soubor vygenerovaný z předchozího scriptu
+* sloupec_A a sloupec_B => sloupce z dataframu, kde se hledají závislost - musí se jednat o indikátory
+* typ korelace => 'spearman' 'pearson' 'kendall' (pro kendall typ není naprogramovaná vizualizace)
+* vizualizace => True False #generuje graf*
+* group_by = které hodnoty má seskupovat - vypočítá korelaci pro každou kategorii - pokud je vizualizace zapnuta, vytvoří graf pro každou kategorii
+* minimum_clanku => používá se pouze v případě kdy group_by argument je využívaný. Říká, jaké procento dokumentů musí obsahovat kategorie, aby byla brána v potaz (například nemá cenu vykreslovat ty kategorie, do kterých spadájí jen 4 články, nemají pak výpovědní hodnotu)
 
 př: zjisti_korelaci(df, "pole_TC", "mendeley_altmetrics",  typ_korelace="pearson", vizualizace=True, minimum_clanku=1, group_by="typ_dokumentu")
 
 
 
-zjisti_podil_dokumentu_v_agregatorech() - výstupem je vytisklá tabulka a graf
-----------------------------------------
+## zjisti_podil_dokumentu_v_agregatorech() - výstupem je vytisklá tabulka a graf
+
 Zjištuje dostupnost v jednotlivých agregátorech
 Umí to i GroupBy (pokud se do argumentu pro groupby vloží dvě kategorie oddělené čárkou, pak se data seskupí podle obou kategorií. př.: groupby="research_categories, list_DT")
 
-data => naimportované data, csv soubor vygenerovaný z předchozího scriptu
-groupby => které hodnoty má seskupovat (pokud se do argumentu pro groupby vloží dvě kategorie oddělené čárkou, pak se data seskupí podle obou kategorií. př.: groupby="research_categories, list_DT") /pro tento pokročilý případ to však neumí vizualizaci
-vizualizace => vykreslit graf - True, False
-minimum_clanku => používá se pouze v případě kdy group_by argument je využívaný. Říká, jaké procento dokumentů musí obsahovat kategorie, aby byla brána v potaz
+* data => naimportované data, csv soubor vygenerovaný z předchozího scriptu
+* groupby => které hodnoty má seskupovat (pokud se do argumentu pro groupby vloží dvě kategorie oddělené čárkou, pak se data seskupí podle obou kategorií. př.: groupby="research_categories, list_DT") /pro tento pokročilý případ to však neumí vizualizaci
+* vizualizace => vykreslit graf - True, False
+* minimum_clanku => používá se pouze v případě kdy group_by argument je využívaný. Říká, jaké procento dokumentů musí obsahovat kategorie, aby byla brána v potaz
 
 př: zjisti_podil_dokumentu_v_agregatorech(df, groupby="funding", vizualizace=True, minimum_clanku=1)
 
 
 
-disciplinary_and_time_differences() - výstupem je vytislká tabulka a graf
-----------------------------------
+## disciplinary_and_time_differences() - výstupem je vytislká tabulka a graf
+
 zjištuje průměr nebo median indikátorů za jednotlivé roky, vykresluje graf. Zároveň zjišťuje o kolik % jednotlivé indikátory klesly. 
-data => naimportované data, csv soubor vygenerovaný z předchozího scriptu
-indikator => určuje, pro který indikátor se má vypočítat průměr nebo median a ten následně vykreslit
-groupby => podle čeho seskupovat do kategorií (povinný argument, v předchozích případech funkcí je totiž dobrovolný)
-median_or_mean => jestli má vypočítat průměr nebo median
-priprava_dat_vice_hodnoty => vždy True a neřešit :-)
-minimum_clanku => Říká, jaké procento dokumentů musí obsahovat kategorie, aby byla brána v potaz
+* data => naimportované data, csv soubor vygenerovaný z předchozího scriptu
+* indikator => určuje, pro který indikátor se má vypočítat průměr nebo median a ten následně vykreslit
+* groupby => podle čeho seskupovat do kategorií (povinný argument, v předchozích případech funkcí je totiž dobrovolný)
+* median_or_mean => jestli má vypočítat průměr nebo median
+* priprava_dat_vice_hodnoty => vždy True a neřešit :-)
+* minimum_clanku => Říká, jaké procento dokumentů musí obsahovat kategorie, aby byla brána v potaz
 
 př: disciplinary_and_time_differences(data, indikator, groupby, median_or_mean, priprava_dat_vice_hodnoty=True, minimum_clanku=False):
 
 
 
 
-zjisti_vlivne_faktory()
-------------------------
+## zjisti_vlivne_faktory()
+
 není ještě naprogramováno
 
 
