@@ -39,43 +39,43 @@ Výstupem tohoto skriptu je log soubor a csv soubor.
 
 CSV soubor má následující sloupce
 
-*#list_AF                ->  seznam autorů, získané z pole AF (nepoužívá se)
-*pocet_autoru            ->  počet autorů; zjištěn počet položek v poli "list_AF"
-*list_DT                 ->  Typ dokumentu
-*list_WC                 ->  kategorie WoS: https://images.webofknowledge.com/images/help/WOS/hp_subject_category_terms_tasca.html
-*list_SC,                ->  kategorie oblasti výzkumu - "Research Areas": https://images.webofknowledge.com/images/help/WOS/hp_research_areas_easca.html
-*research_categories,    ->  subkategorie z "list_SC" byly namapované na nadřazené kategorie, kterých je celkem jen 5
-*interdistiplinarita,    ->  pokud článek disponuje více nadřazenýma kategoriema v listu "research_categories", tak je brán za mezioborový
-*list_TC,                ->  počet citací z WoS (ačkoliv se jedna o klasický int, z nějakého důvodu ho mám v listu)
-*open_access             ->  True nebo False -> indikuje jestli je článek OA
-*list_OA,                ->  pokud je článek OA zde je informace o tom v jakém modu 
-*list_PG,                ->  počet stránek článku
-*#list_AB,               ->  abstrakt (z nějkého důvodu je v listu i když by asi být nemusel)(nepoužívá se)
-*list_Flesch             ->  čitelnost abstraktu (Flesh koeficient https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests)
-*pocet_slov_AB           ->  délka abstraktu
-*mezinarodni_spoluprace  ->  True nebo False -> Pokud alespoň jeden z autorů pracuje pod institucí mimo ČR, tak True
-*list_C1,                ->  seznam zemí autorů: z kompletní hodnoty je vyfiltrovaná pouze země samotná (bez města, atd..)
-*list_TI,                ->  název článku (dohromady i s podnázvem)
-*pocet_slov_TI           ->  délka názvu článku
-*list_FU,                ->  seznam grantů
-*funding                 ->  indikátor, jestli byl výzkum financován z grantu; True/False ; vychází z listu "list_FU"- pokud je prázdný tak False, jinak True
-*doi                     ->  DOI článku - slouží hlavně pro vstup k API
-*list_LA                 ->  jazyk dokumentu
-*available_altmetrics    ->  TRUE nebo FALSE - říká, jestli je článek k dispozici ve službě Altmetrics.com
-*tweetovani_altmetrics   ->  Altmetric.com | počet účtů na twitteru, které citovali článek
-*fb_altmetrics           ->  Altmetric.com | počet stránek na FB, které sdílely článek
-*blogy_altmetrics        ->  Altmetric.com | počet blogů ve kterých se objevil článek
-*zpravy_altmetrics
-*reddit_altmetrics
-*video_altmetric         ->  Altmetric.com | Youtube a Vimeo
-*mendeley_altmetrics
-*score_altmetrics        ->  Altmetric.com | indikátor, který agreguje a váží všechna data
-*available_plumx         ->  PlumX | TRUE nebo FALSE - říká, jestli je článek k dispozici ve službě PlumX
-*capture                 ->  PlumX | Indicates that someone wants to come back to the work. Captures can be an leading indicator of future citations.
-*citation                ->  PlumX |  This is a category that contains both traditional citation indexes such as Scopus, as well as citations that help indicate societal impact such as Clinical or Policy Citations.
-*mentions                ->  PlumX | Measurement of activities such as news articles or blog posts about research. Mentions is a way to tell that people are truly engaging with the research.
-*socialMedia             ->  PlumX | This category includes the tweets, Facebook likes, etc. that reference the research. Social Media can help measure “buzz” and attention.  Social media can also be a good measure of how well a particular piece of research has been promoted.
-*usage                   ->  PlumX | A way to signal if anyone is reading the articles or otherwise using the research. Usage is the number one statistic researchers want to know after citations.
+-#list_AF                ->  seznam autorů, získané z pole AF (nepoužívá se)
+-pocet_autoru            ->  počet autorů; zjištěn počet položek v poli "list_AF"
+-list_DT                 ->  Typ dokumentu
+-list_WC                 ->  kategorie WoS: https://images.webofknowledge.com/images/help/WOS/hp_subject_category_terms_tasca.html
+-list_SC,                ->  kategorie oblasti výzkumu - "Research Areas": https://images.webofknowledge.com/images/help/WOS/hp_research_areas_easca.html
+-research_categories,    ->  subkategorie z "list_SC" byly namapované na nadřazené kategorie, kterých je celkem jen 5
+-interdistiplinarita,    ->  pokud článek disponuje více nadřazenýma kategoriema v listu "research_categories", tak je brán za mezioborový
+-list_TC,                ->  počet citací z WoS (ačkoliv se jedna o klasický int, z nějakého důvodu ho mám v listu)
+-open_access             ->  True nebo False -> indikuje jestli je článek OA
+-list_OA,                ->  pokud je článek OA zde je informace o tom v jakém modu 
+-list_PG,                ->  počet stránek článku
+-#list_AB,               ->  abstrakt (z nějkého důvodu je v listu i když by asi být nemusel)(nepoužívá se)
+-list_Flesch             ->  čitelnost abstraktu (Flesh koeficient https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests)
+-pocet_slov_AB           ->  délka abstraktu
+-mezinarodni_spoluprace  ->  True nebo False -> Pokud alespoň jeden z autorů pracuje pod institucí mimo ČR, tak True
+-list_C1,                ->  seznam zemí autorů: z kompletní hodnoty je vyfiltrovaná pouze země samotná (bez města, atd..)
+-list_TI,                ->  název článku (dohromady i s podnázvem)
+-pocet_slov_TI           ->  délka názvu článku
+-list_FU,                ->  seznam grantů
+-funding                 ->  indikátor, jestli byl výzkum financován z grantu; True/False ; vychází z listu "list_FU"- pokud je prázdný tak False, jinak True
+-doi                     ->  DOI článku - slouží hlavně pro vstup k API
+-list_LA                 ->  jazyk dokumentu
+-available_altmetrics    ->  TRUE nebo FALSE - říká, jestli je článek k dispozici ve službě Altmetrics.com
+-tweetovani_altmetrics   ->  Altmetric.com | počet účtů na twitteru, které citovali článek
+-fb_altmetrics           ->  Altmetric.com | počet stránek na FB, které sdílely článek
+-blogy_altmetrics        ->  Altmetric.com | počet blogů ve kterých se objevil článek
+-zpravy_altmetrics
+-reddit_altmetrics
+-video_altmetric         ->  Altmetric.com | Youtube a Vimeo
+-mendeley_altmetrics
+-score_altmetrics        ->  Altmetric.com | indikátor, který agreguje a váží všechna data
+-available_plumx         ->  PlumX | TRUE nebo FALSE - říká, jestli je článek k dispozici ve službě PlumX
+-capture                 ->  PlumX | Indicates that someone wants to come back to the work. Captures can be an leading indicator of future citations.
+-citation                ->  PlumX |  This is a category that contains both traditional citation indexes such as Scopus, as well as citations that help indicate societal impact such as Clinical or Policy Citations.
+-mentions                ->  PlumX | Measurement of activities such as news articles or blog posts about research. Mentions is a way to tell that people are truly engaging with the research.
+-socialMedia             ->  PlumX | This category includes the tweets, Facebook likes, etc. that reference the research. Social Media can help measure “buzz” and attention.  Social media can also be a good measure of how well a particular piece of research has been promoted.
+-usage                   ->  PlumX | A way to signal if anyone is reading the articles or otherwise using the research. Usage is the number one statistic researchers want to know after citations.
 
 V souboru log je možné vyčíst datum a čas zpracování každého jednotlivého záznamu; název zdrojového souboru, ze kterého daný záznam pochází; pořadí záznamu; DOI záznamu; a počet, kolik záznamů zatím nemělo k dispozici DOI a nemohly být tak zpracovány
 
