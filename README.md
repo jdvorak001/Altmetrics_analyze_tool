@@ -5,21 +5,21 @@ Tento program vznikl pro potřeby diplomové práce s názvem "Altmetrie a její
 Program se skládá celkem ze dvou skriptů. Skript s názvem DP_process_data.py v první řadě prochází všechny dodané soubory ve formátu Endnote (.ciw) na jeho vstupní složce. Z těchto souborů extrahuje všechny potřebná data, pokud hledaná informace chybí, program místo ní doplní hodnotu „None“. V druhé řadě tento skript využívá přístupné API rozhraní služby PlumX a Altmetrics.com, na které vznáší požadavky obsahující DOI identifikátor získaný z předtím extrahovaného Endnote souboru. Při pozitivní odpovědi, která je vždy ve fromátu JSON, extrahuje hledaná data. V případě negativní odpovědi je vrácena hodnota „None“. Takto zpracované informace jsou zapsány do CSV souboru, který je výstupem tohoto skriptu (zároveň je výstupem i logfile, který zaznamenává informace o stavu zpracování záznamů). 
 Druhým skriptem je DP_analyze_data.py. Vstup tohoto skriptu je zmíněný CSV soubor, jehož řádky jsou jednotlivé dokumenty a jehož sloupce jsou potřebná metadata dokumentu a současně také jednotlivé sledované identifikátory. Tyto data skript zpracovává a jeho výstupem jsou propočtené tabulky a vykreslené grafy, na jejichž základě byly zodpovězeny výzkumné otázky definované na předchozích stránkách této práce. 
 
-##Vytvořený program používá následující knihovny:
-###Pro automatizaci sběru dat:
+## Vytvořený program používá následující knihovny:
+### Pro automatizaci sběru dat:
 •	request
 •	os
 •	json
 •	time
 •	datetime
 •	textstat
-###Pro statistickou analýzu dat:
+### Pro statistickou analýzu dat:
 •	pandas
 •	numpy
 •	sklearn
 •	statsmodels.api
 •	scipy
-###K vizualizaci byly použity nástroje:
+### K vizualizaci byly použity nástroje:
 •	seaborn 
 •	matplotlib
 
