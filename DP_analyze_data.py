@@ -4,9 +4,17 @@ import numpy as np
 from pandas.core.frame import DataFrame
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
 from scipy.stats.stats import pearsonr
+import scipy.stats as stats
+from scipy.stats import wilcoxon
+from scipy.stats import mannwhitneyu
+from scipy.stats import gmean
+from test_for_corr import independent_corr
+import warnings
+warnings.filterwarnings("ignore")
 """
 FUNKCE POUŽÍVANÉ PRO STATISTICKOU ANALÝZU, VOLANÉ UŽIVATELEM:
 
@@ -37,6 +45,14 @@ column_names = ["pocet_autoru", "typ_dokumentu", "kategorie_WC", "kategorie_SC",
                     "mendeley_altmetrics", "score_altmetrics", "available_plumx","capture_plumx", "citation_plumx",
                     "mentions_plumx", "socialMedia_plumx", "usage_plumx"]
 
+                    #ODSTRANĚNO PRO ZENODO KVŮLI ANONYMIZACI:
+                    #pocet_slov_AB
+                    # pole_C1
+                    # title
+                    # pocet_slov_TI
+                    # pole_FU
+                    # doi
+
 
 
 #df = pd.read_csv(r"C:\Users\UKUK\Desktop\DP Altmetrie\Script\csv_data_test_9.csv", sep=";", header=None, names=column_names)
@@ -45,9 +61,12 @@ df.replace(to_replace=["None"], value=np.nan, inplace=True)  # tento řádek se 
 df = df[df["list_PY"] != 2022] #z nějakého důvodu se mi stáhly i články za roky 2022, proto je odstraňuji
 df = df[df["list_PY"].notnull()] #některé články nemají žádnou informaci o roku. Proto je odstraňuji, protože si nemohu být jistý, že se tam nevtrousili ještě nějaké další např z roku 2022
 
+df02 = pd.read_csv(r"C:\Users\UKUK\Desktop\DP Altmetrie\Script\csv_data_real_data_druhe_stazeni.csv", sep=";", header=None, names=column_names)
+df02.replace(to_replace=["None"], value=np.nan, inplace=True)  # tento řádek se stará o prázdné hodnoty, které převádí z Pythonovské syntaxe do Pandas syntaxe
+df02 = df02[df02["list_PY"] != 2022] #z nějakého důvodu se mi stáhly i články za roky 2022, proto je odstraňuji
+df02 = df02[df02["list_PY"].notnull()]
 
-
-def zjisti_korelaci(data, sloupec_A, sloupec_B, typ_korelace, vizualizace=False, group_by=False, minimum_clanku=False):
+def zjisti_korelaci(data, sloupec_A, sloupec_B, typ_korelace, vizualizace=False, group_by=False, minimum_clanku=False, top_hodnoty=False, zjisti_p_value=False):
     """
        *data => vlož dataframe z pandas*
        *sloupec_A a sloupec_B => sloupce z dataframu, kde se hledá závislost*
@@ -55,6 +74,8 @@ def zjisti_korelaci(data, sloupec_A, sloupec_B, typ_korelace, vizualizace=False,
        *vizualizace => True False #generuje graf*
        -vizualizace se zobrazí pouze u spearmanové korelace. Ostatní negenerují graf.
        *group_by = které hodnoty má seskupovat - vypočítá korelaci pro každou kategorii - pokud je vizualizace zapnuta, vytvoří graf pro každou kategorii
+       *minimum_clanku ==> určuje, kolik musí být v dané kategorii článku aby byla vykreslena a spočítána a brána v úvahu
+       *top_hodnoty => pokud uživatel chce vykresilit pouze top n hodnot, které nejvíce korelují./// TODO zatím to nefunguje u Spearmana.. je potřeba opravit .. teď funguje jen u pearsona
     """
     data = data[data[sloupec_A].notna()]
     data = data[data[sloupec_B].notna()]
@@ -62,7 +83,7 @@ def zjisti_korelaci(data, sloupec_A, sloupec_B, typ_korelace, vizualizace=False,
     data[sloupec_B] = pd.to_numeric(data[sloupec_B]) #, errors='coerce'
 
     if typ_korelace == "pearson":
-        print("Pro pearsonovu korelaci převádím data do logaritmického měřítka...")
+        #print("Pro pearsonovu korelaci převádím data do logaritmického měřítka...")
         data[sloupec_A] = np.log(1 + data[sloupec_A])
         data[sloupec_B] = np.log(1 + data[sloupec_B])
     
@@ -78,31 +99,70 @@ def zjisti_korelaci(data, sloupec_A, sloupec_B, typ_korelace, vizualizace=False,
             data = redukuj_kategorie_pri_nizkych_poctech(data, minimum_clanku, group_by)
 
         grouped = data[sloupec_A].groupby(data[group_by])
+        stats_df = data.groupby([group_by]).size().reset_index(name='counts')
+        
+        stats_df.set_index(group_by, inplace=True)
+        print(stats_df)
+        print(stats_df.iloc[0]["counts"])
+        print(stats_df.iloc[1]["counts"])
         
         
         korelace = grouped.corr(data[sloupec_B], method=typ_korelace)
+        #merged_df = pd.merge(korelace, stats_df, on="kategorie_WC")
 
         # korelace = data.filter(items=[sloupec_A, sloupec_B]).corr(method=typ_korelace)
         # sns.heatmap(korelace)
         # plt.show()
     print("Typ korelace:", typ_korelace)
     print(korelace)
+    
+    if zjisti_p_value is True and group_by is not False:
+    # print("zkouška lokace")
+        corr1 = korelace.loc["False"]
+        corr2 = korelace.loc["True"]
+        count1 = stats_df.loc["False"]
+        count2 = stats_df.loc["True"]
+    # print("--------tady-----------")
+    # print("count1 tady:",count1.item())
+    # print("count2 tady:",count2.item())
+
+        korelace = korelace.reset_index()
+
+        #print("significance test:")
+        print(independent_corr(corr1.item(), corr2.item(), count1.item(), count2.item(), method='fisher')[1]) #return Z and P-Value -> [1] je P-value
+    
+    korelace = korelace.reset_index()
+
+    if top_hodnoty is not False and typ_korelace == "pearson":
+        korelace = korelace.nlargest(top_hodnoty, 'pole_TC')
+        #print("nlarge")
+        #print(korelace)
+ 
+    #print(merged_df) 
+    
+    #vypíše dataframe do file
+    # with open("korelace_df_counts.txt", 'a') as f:
+    #     dfAsString = merged_df.to_string(header=False, index=False)
+    #     f.write(dfAsString)
 
     if vizualizace is True and typ_korelace == "spearman": #grafy fungují jen na Spearmanovu korelaci, Pearsonova není naprogramována
         if group_by is False:
             data["Rank_A"] = data[sloupec_A].rank(method="first")
             data["Rank_B"] = data[sloupec_B].rank(method="first")
-            data.sort_values("list_TC", inplace = True)
-            sns.set_theme(style="darkgrid")
+            data.sort_values("list_TC", inplace = True)        
 
+            sns.set_theme(style="darkgrid")
+            
             sns.lmplot(data=data, x="Rank_A", y="Rank_B")
+
             plt.show()
 
 
         if group_by is not False:
+            
             data["Rank_A"] = data[sloupec_A].rank(method="first") # zde u té metody si nejsem jistý - zeptat se vedoucího co si o tom myslí #TODO
             data["Rank_B"] = data[sloupec_B].rank(method="first") # |_> jde o to, že metoda určuje co dělat s hodnotama, které jsou stejné a do jakého ranku je poté zařadit -> když použiju "Avarage" (ten by se podle Spearmena měl používat), tak graf vypadá divně
-            data.sort_values("list_TC", inplace = True)
+            data.sort_values("pole_TC", inplace = True)
             sns.set_theme(style="darkgrid")
 
             g = sns.FacetGrid(data, col=group_by, col_wrap=4) #, xlim=(0,800), ylim=(0,800))  # toto dělá čtverec z grafu
@@ -113,6 +173,8 @@ def zjisti_korelaci(data, sloupec_A, sloupec_B, typ_korelace, vizualizace=False,
                 txt.set_title(title)   
                 # add text
                 txt.text(10, 120, "ρ = " + str(korelace[title]), fontsize = 12)
+                # val = korelace.loc[korelace[group_by] == title, "pole_TC"].iloc[0]
+                # txt.text(0.5, 0.5, "ρ = " + str(val), fontsize = 12)
 
     
             #sns.lmplot(data=data, x="Rank_A", y="Rank_B", col=group_by, col_wrap=2)
@@ -120,21 +182,40 @@ def zjisti_korelaci(data, sloupec_A, sloupec_B, typ_korelace, vizualizace=False,
 
     if vizualizace is True and typ_korelace == "pearson":
         if group_by is False:
+            
+
             sns.set_theme(style="darkgrid")
 
-            sns.lmplot(data=data, x=sloupec_A, y=sloupec_B, scatter_kws={'s':1}, line_kws={'color': 'coral'})
+            sns.lmplot(data=data, x=sloupec_A, y=sloupec_B, scatter_kws={'s':7, 'alpha': 0.03}, line_kws={'color': 'coral'}, height=3.4) #TODO - zde nastavit správnou průhlednost 
+            plt.text(5.5, 0.5, "ρ = " + str("%.2f" % korelace), fontsize = 12)
+
             plt.show()
         if group_by is not False:
-               
-            g = sns.FacetGrid(data, col=group_by, col_wrap=4)
-            g.map(sns.regplot, sloupec_A, sloupec_B, scatter_kws={'s':1}, line_kws={"color": "coral"})
+            list_pouzivanych_hodnot = korelace[group_by].to_list()
+            #print(list_pouzivanych_hodnot)
+            data = data.loc[data[group_by].isin(list_pouzivanych_hodnot)]
+
+
+            data = make_order_in_top_plots(data, korelace)
+
+
+            #print(data)
+
+            g = sns.FacetGrid(data, col=group_by, col_wrap=5)
+            if top_hodnoty is not False:
+                g.map(sns.regplot, sloupec_A, sloupec_B, scatter_kws={'s':5, 'alpha': 0.5}, line_kws={"color": "coral"})
+            if top_hodnoty is False:
+                g.map(sns.regplot, sloupec_A, sloupec_B, scatter_kws={'s':5, 'alpha': 0.03}, line_kws={"color": "coral"})
             col_order = data[group_by].unique() #toto zjištuje jaké typy z group_by existují 
-            print(type(col_order), col_order)
+            #print(type(col_order), col_order)
             for txt, title in zip(g.axes.flat, col_order):
-                txt.set_title(title)   
+                txt.set_title(title, fontsize=10) #fontsize=9
                 # add text
-                txt.text(0.5, 0.5, "ρ = " + str(korelace[title]), fontsize = 12)
-                #txt.text(1,2,"trololo", fontsize = 12)
+                #print(korelace[title])
+                #txt.text(0.5, 0.5, "ρ = " + str(korelace[title]), fontsize = 12)
+                val = korelace.loc[korelace[group_by] == title, "pole_TC"].iloc[0]
+                txt.text(0.5, 0.5, "ρ = " + str(val), fontsize = 12)
+
             #sns.lmplot(data=data, x=sloupec_A, y=sloupec_B, col=group_by, col_wrap=2)
             plt.show()
 
@@ -146,6 +227,54 @@ def zjisti_korelaci(data, sloupec_A, sloupec_B, typ_korelace, vizualizace=False,
 #     př.: Medical Science = ze 180 článku jich má záznam 54 .. (54/180)
 #     Jde o to zjistit, co má největší počet záznamů 
 #     """
+def make_order_in_top_plots(data, korelace_df):
+    """tato funkce slouží pouze pro vizualizaci korelace. Jejím cílem je zajistit, aby vizualizované grafy byly seřazeny od největší naměřené hodnoty po nejemenší.
+       Seaborn totiž neumí grafy seřazovat tak jak bych potřeboval. Proto bylo využito vlastnosti knihovny seaborn, která řadí grafy podle titlu, na který narazí nejdříve. 
+       Funkce "make_order_in_top_plots" pak mění pořadí řádku v dataframu aby seaborn narazil najdříve na ty titly, na který potřebuji, tím je pak zaručeno seřazení.    
+    """
+    korelace_df.reset_index(inplace = True)
+    data.reset_index(inplace = True)
+    print(korelace_df)
+    korelace_df.sort_values(by=['pole_TC'], ascending=False, inplace=True)
+    colname = korelace_df.columns[1]
+    list_sort = korelace_df[colname].to_list()
+    helpful_dataframe = DataFrame()
+    helpful_dataframe = data[0:0]
+    print(data)
+    for l in list_sort:
+        a_iter = 0
+        for i in data[colname]:
+            # print(a_iter)
+            # print(i)
+            # print(l)
+            if l == i :
+
+
+                helpful_dataframe.loc[data.index[a_iter]] = data.iloc[a_iter]
+                radek = data.iloc[a_iter]
+                doi_smazat = str(radek["doi"])
+                data.drop(data[data['doi'] == doi_smazat].index, inplace = True)
+                # data.reset_index(inplace = True)
+
+                
+                
+                #data.loc[1], data.loc[a_iter] = data.loc[a_iter], data.loc[1]
+                #data.loc[1] = data.loc[a_iter]
+                #data.reset_index(inplace = True)
+                a_iter += 1
+                break
+            a_iter += 1
+    
+
+    result = helpful_dataframe.append(data)
+
+    print(list_sort)
+    return result
+    
+#['Geography, Physical', 'Chemistry, Multidisciplinary', 'Polymer Science', 'Chemistry, Analytical', 'Electrochemistry']
+
+
+
 
 def prepare_dataframe_for_multivalues(data, column_to_check, proportion=False):
     """
@@ -154,7 +283,7 @@ def prepare_dataframe_for_multivalues(data, column_to_check, proportion=False):
     Pokud je proportion False, tak každému novému řádku přidělí sledovaný indikátor 100%. Pokud je v proportion uvedený sledovaný indikátor, tento indikátor podělí mezi ostatní nově vzniklý řádky tzn. férovým podílem každé kategorii 1/n 
     """
     
-    print("prepare_dataframe_for_multivalues(): PROBÍHÁ PŘÍPRAVA DAT")
+    #print("prepare_dataframe_for_multivalues(): PROBÍHÁ PŘÍPRAVA DAT")
     #---------------------------------------------------------------------
     #STARÝ KOD, UŽ SE NEMUSÍ POUŽÍVAT
     #----
@@ -185,22 +314,29 @@ def prepare_dataframe_for_multivalues(data, column_to_check, proportion=False):
 
 
 #-----------------------------------------------------------------------------------------------
-
+    #data[proportion] = data[proportion].astype(int) #TOHLE JSEM PŘIDAL NOVĚ, NEMĚLO BY TO DĚLAT NEPLECHU. ALE KDY NÁHODOU TAK KOUKNI SEM
     data[column_to_check] = data[column_to_check].astype(str) 
     data[column_to_check] = data[column_to_check].str.replace("; ", ";")# my mistake - some columns have different separator - extra space - this can deal with that mistake
     asn_lists = data[column_to_check].str.split(';')         # split strings into list
     
     data[column_to_check] = asn_lists                        # replace strings with lists in the dataframe
 
-
+    
     df2 = data.explode(column_to_check)                      # explode based on the particular column
+
+
     if proportion is not False:
-        df2[proportion] /= df2[proportion].groupby(level=0).transform('count') # hodnotu zkoumaného indikátoru rozdělí pro každou kategorii ve férovém podílu
+        try:
+            df2[proportion] /= df2[proportion].groupby(level=0).transform('count') # hodnotu zkoumaného indikátoru rozdělí pro každou kategorii ve férovém podílu
+        except TypeError:
+            df2[proportion] = df2[proportion].astype(int)
+            df2[proportion] /= df2[proportion].groupby(level=0).transform('count')
+       #df2 = data.explode(column_to_check).assign(**{proportion: lambda d: d.groupby(level=0)[proportion].apply(lambda s:s/len(s))})
 
-
-    print(len(data), "delka originálního dataframu")
-    print(len(df2), "delka dataframu po vyřešení multivalues")
-    print("------------------------")
+#------TOHLE PRINTĚNÍ JE DOBRÁ VĚC, ODKOMENTUJ V PŘÍPADĚ POTŘEBY----------
+    # print(len(data), "delka originálního dataframu")
+    # print(len(df2), "delka dataframu po vyřešení multivalues")
+    # print("------------------------")
 
     df2 = df2[df2[column_to_check] != "None"]  #především u "research_categories" se mi objevuje None hodnota. Tímhle jí mažu
     
@@ -391,7 +527,7 @@ def zjisti_podil_dokumentu_v_agregatorech(data, groupby=False, vizualizace=False
 
         print(df_group_by)
 
-        # vypíše dataframe do file
+        #vypíše dataframe do file
         # tfile = open('dfgroupby_podily2.txt', 'a')
         # tfile.write(df_group_by.to_string())
         # tfile.close()
@@ -412,6 +548,7 @@ def zjisti_podil_dokumentu_v_agregatorech(data, groupby=False, vizualizace=False
 
         df_group_by["Procentualně_k_dispozici_PlumX"].plot(kind='barh',color='green',ax=ax,width=width, position=0)
         df_group_by["Procentualně_k_dispozici_Altmetrics"].plot(kind='barh',color='red', ax=ax,width = width,position=1)
+
 
         ax.set_ylabel(groupby)
         ax.set_xlabel('Procentuelně k dispozici')
@@ -466,6 +603,101 @@ def vypocti_pomer_zaznamu(data, celkem, zkoumany_indikator, jednotka):
     return pocet_hledane_hodnoty, nenulove, procentuelne_k_dispozici, procentuelne_chybi
 
 
+#MUSÍ SE JEŠTĚ DODĚLAT TATO FUNKCE -> ZJISTIT PRŮMĚRY JAK SE ZMĚNILY
+def get_different_rows(source_df, new_df, sledovany_indikator):
+    """Vrací řádky ve kterých proběhla změna a současně vypočítá kolik řádků se změnilo
+        Na vstupu je původní dataset, nově naměřený dataset po určitém časovém období a určí se sledovaný indikátor, pro který se má sledovat změna.
+        (tzn. sledují se pouze změny pro jeden indikátor)    
+    """
+    
+    prepared_source_df = source_df[["doi", sledovany_indikator]]
+    prepared_new_df = new_df[["doi", sledovany_indikator]]
+    
+    merged_df = prepared_source_df.merge(prepared_new_df, indicator=True, how='outer')
+    changed_rows_df = merged_df[merged_df['_merge'] == 'right_only']
+    
+    changed_rows_dataframe = changed_rows_df.drop('_merge', axis=1)
+    
+    delka_source_df = source_df.shape[0] #vrátí počet řádků původního dataframu
+    pocet_zmenenych_radku = changed_rows_dataframe.shape[0]
+
+
+    procentuelne_zmenenych = (pocet_zmenenych_radku / delka_source_df) * 100
+
+    print(changed_rows_dataframe)
+    print("Celková délka dataframu:", len(prepared_source_df))
+    print("Počet řádků, kterým se změnila hodnota indikátoru:", pocet_zmenenych_radku)
+    print("Změna vyjádřena procentuelně:", procentuelne_zmenenych)
+
+    prepared_source_df[sledovany_indikator] = prepared_source_df[sledovany_indikator].astype('float')
+    prepared_new_df[sledovany_indikator] = prepared_new_df[sledovany_indikator].astype('float')
+
+    prepared_source_df = prepared_source_df[prepared_source_df[sledovany_indikator].notna()]
+    prepared_new_df = prepared_new_df[prepared_new_df[sledovany_indikator].notna()]
+
+    prumer_mereni_1 = prepared_source_df[sledovany_indikator].mean()
+    prumer_mereni_2 = prepared_new_df[sledovany_indikator].mean()
+
+    median_mereni_1 = prepared_source_df[sledovany_indikator].median()
+    median_mereni_2 = prepared_new_df[sledovany_indikator].median()
+
+    max_mereni_1 = prepared_source_df[sledovany_indikator].max()
+    max_mereni_2 = prepared_new_df[sledovany_indikator].max()
+
+    # prepared_source_df = prepared_source_df[prepared_source_df[sledovany_indikator].notna()]
+    # prepared_new_df = prepared_new_df[prepared_new_df[sledovany_indikator].notna()]
+
+    array_1 = prepared_source_df[sledovany_indikator].to_numpy()
+    array_2 = prepared_new_df[sledovany_indikator].to_numpy()
+
+
+
+    percentile99_1 = np.percentile(array_1, 99)
+    percentile99_2 = np.percentile(array_2, 99)
+    # print(array_1)
+
+  
+
+
+    #https://help.altmetric.com/support/solutions/articles/6000241983-faq-why-has-the-altmetric-attention-score-for-my-paper-gone-down-
+    # radek_max1 = prepared_source_df[prepared_source_df[sledovany_indikator] == prepared_source_df[sledovany_indikator].max()] #vrátí celý řádek z dataframu pro hodnotu, která je v množině nejvyšší -- potřeboval jsem DOI
+    # radek_max2 = prepared_new_df[prepared_new_df[sledovany_indikator] == prepared_new_df[sledovany_indikator].max()]
+
+    # print(radek_max1)
+    # print(radek_max2)
+
+    # print(prumer_mereni_1)
+    # print(median_mereni_1)
+    # print(max_mereni_1)
+    # print("-------druhe meření------")
+    # print(prumer_mereni_2)
+    # print(median_mereni_2)
+    # print(max_mereni_2)
+    # print(procentuelne_zmenenych)
+
+    print("percentil 99:")
+    print(percentile99_1)
+    print(percentile99_2)
+    
+    return changed_rows_dataframe
+
+#get_different_rows(df, df02, "mendeley_altmetrics")
+
+def encoding_of_variable_for_regression(data, variable_to_encode):
+    """funkce převádí kategorické data na matici s 1HOT ENCODING a numerická data zachovává, respektive je připravuje do vhodného formátu"""
+    if str(data[variable_to_encode].dtype) == "object" or str(data[variable_to_encode].dtype) == "str" or str(data[variable_to_encode].dtype) == "bool":
+
+        data[variable_to_encode] = data[variable_to_encode].str.replace("; ", ";")
+        data[variable_to_encode] = data[variable_to_encode].astype(str) #převod do stringu především kvůli bool proměnným
+        faktor = data[variable_to_encode].str.get_dummies(sep=';') #https://stackoverflow.com/questions/18889588/create-dummies-from-column-with-multiple-values-in-pandas
+
+
+    if str(data[variable_to_encode].dtype) == "int64" or str(data[variable_to_encode].dtype) == "float":
+        faktor = data[[variable_to_encode]].to_numpy()
+        faktor = faktor.flatten() #pro model je potřeba 1D pole, o to se stará "flatten()"
+    
+    return faktor
+
 def zjisti_vlivne_faktory(data, indikator, faktor, vizualizace):
     """
     CÍLEM TÉTO FUNKCE JE ZJISTIT ZDALI ZKOUMANÝ FAKTOR NĚJAK OVLIVŇUJE HODNOTU INDIKÁTORU
@@ -478,37 +710,22 @@ def zjisti_vlivne_faktory(data, indikator, faktor, vizualizace):
     #zahatuji řádky, ve kterých se vyskytne NaN pro zkoumaný sloupec
     df = data[data[indikator].notna()] 
     data = df[df[faktor].notna()]
-    data = prepare_dataframe_for_multivalues(data, faktor)#, indikator) #TODO indikátor nefunguje v tomhle případě 
+    data = data[data[faktor] != "Art Exhibit Review"]
+    data = data[data[faktor] != "Biographical-Item"]
+    data = data[data[faktor] != "Hardware Review"]
+    data = data[data[faktor] != "Software Review"]
+    data = data[data[faktor] != "Book Review"]
 
-    if str(data[faktor].dtype) == "object" or str(data[faktor].dtype) == "str":
-        vizualizace = False
+    #data = prepare_dataframe_for_multivalues(data, faktor)#, indikator) #TODO indikátor nefunguje v tomhle případě 
 
-        X_regressors = data[[indikator]].to_numpy().reshape((-1, 1))
-        X_regressors = X_regressors.astype(float)
-        Y_predictor = pd.get_dummies(data=data[faktor], drop_first=False) #https://stackoverflow.com/questions/34007308/linear-regression-analysis-with-string-categorical-features-variables
-        #print(Y_predictor)
-        X_regressors = np.log(1 + X_regressors)
-        
-    if str(data[faktor].dtype) == "int64" or str(data[faktor].dtype) == "bool" or str(data[faktor].dtype) == "float":
-
-        X_regressors = data[[indikator]].to_numpy().reshape((-1, 1))
-        X_regressors = X_regressors.astype(float)
-        Y_predictor = data[[faktor]].to_numpy()
-        Y_predictor = Y_predictor.flatten() #pro model je potřeba 1D pole, o to se stará "flatten()"
-        
-        X_regressors = np.log(1 + X_regressors) #https://sci-hub.se/10.2200/S00733ED1V01Y201609ICR052 for skewed data
-    #Y_predictor = np.log(1 + Y_predictor)
-
-    # print("Počet článku ze kterého lineární regrese vychází:")
-    # print("Regresor: " + str(len(X_regressors)), "Prediktor: " + str(len(Y_predictor))) #TODO - zjistit co vše se započítává, jestli i nulové hodnoty? 
-  
-
+    Y_predictor = data[[indikator]].to_numpy().reshape((-1, 1))
+    Y_predictor = Y_predictor.astype(float)
+    Y_predictor = np.log(1 + Y_predictor) #https://sci-hub.se/10.2200/S00733ED1V01Y201609ICR052 for skewed data
+    X_regressors = encoding_of_variable_for_regression(data, faktor)
 
 #---------------------real thing-----------------------------  
     model = LinearRegression()
-
     model.fit(X_regressors, Y_predictor)
-
 
     score = model.score(X_regressors, Y_predictor)
     intercept = model.intercept_
@@ -521,30 +738,13 @@ def zjisti_vlivne_faktory(data, indikator, faktor, vizualizace):
     #print("coef", coef)
     #print("predict", prediction)
 
-#--------NEGATIVE BINOMINAL REG----------------
+
+#---------------------------------------------------------------------
+#--------------------pro stepwise metodu------------------------------
     
-    # model_NB = sm.NegativeBinomial(X_regressors, Y_predictor).fit()
-    # print(model_NB.summary())
-
-
-
-
-   
-   
-    # #-----------------------------------
-    #---JINÁ KNIHOVNA, ALE DĚLÁ TO SAMÉ---
-    # #-----------------------------------
-
-    # data[indikator] = data[indikator].astype(float)
-    # data[faktor] = data[faktor].astype(float)
-
-    # x = data[indikator].tolist()
-    # y = data[faktor].tolist()
-
-
-    # x = sm.add_constant(x)
-    # result = sm.OLS(y, x).fit()
-    # print(result.summary())
+    results = sm.OLS(Y_predictor, X_regressors).fit()
+    print(results.summary())
+    print("AIC: ", results.aic)
 
 
 
@@ -557,11 +757,11 @@ def zjisti_vlivne_faktory(data, indikator, faktor, vizualizace):
     #     plt.ylabel(faktor)
     #     plt.show()
 
-        # X_regressors = X_regressors.flatten()
-        # plt.plot(X_regressors, Y_predictor, 'o')
-        # m, b = np.polyfit(X_regressors, Y_predictor, 1)
-        # plt.plot(X_regressors, m*X_regressors + b)
-        # plt.show()
+    #     X_regressors = X_regressors.flatten()
+    #     plt.plot(X_regressors, Y_predictor, 'o')
+    #     m, b = np.polyfit(X_regressors, Y_predictor, 1)
+    #     plt.plot(X_regressors, m*X_regressors + b)
+    #     plt.show()
 
     #return score
 
@@ -570,8 +770,8 @@ def cyklus_vlivne_faktory(funkce, dataset, vizualizace=False):
     """
     Tato funkce volá ve forcyklu funkci "zjisti_vlivne_faktory()". Jejím cílem je zavolat zmíněnou funkci pro všechny potřebné vstupy.
     """
-    faktory = ["list_DT","list_LA","pocet_autoru", "interdistiplinarita", "open_access", "list_PG", "list_Flesch", "pocet_slov_AB", "pocet_slov_TI", "funding", ] #"mezinarodni_spoluprace"
-    indikatory = ["list_TC","tweetovani_altmetrics", "fb_altmetrics", "blogy_altmetrics", "zpravy_altmetrics", "reddit_altmetrics", "video_altmetric", "mendeley_altmetrics", "score_altmetrics", "capture", "citation", "mentions", "socialMedia", "usage"]
+    faktory = ["typ_dokumentu","pole_LA","pocet_autoru", "interdisciplinarita", "open_access", "pocet_str", "flesch", "pocet_slov_AB", "pocet_slov_TI", "funding", "mezinarodni_spoluprace"]
+    indikatory = ["pole_TC","tweetovani_altmetrics", "fb_altmetrics", "blogy_altmetrics", "zpravy_altmetrics", "reddit_altmetrics", "video_altmetrics", "mendeley_altmetrics", "score_altmetrics", "capture_plumx", "citation_plumx", "mentions_plumx", "socialMedia_plumx", "usage_plumx"]
     for indikator in indikatory:
         for faktor in faktory:
             r = funkce(dataset, indikator, faktor, vizualizace)
@@ -588,7 +788,7 @@ def redukuj_kategorie_pri_nizkych_poctech(data, hodnota, hlidany_sloupec):
     TATO FUNKCE SE NEVOLÁ RUČNĚ, VYUŽÍVAJÍ JÍ OSTATNÍ FUNKCE
     
     """
-    procento_nebo_pocet = "procento" #"pocet"
+    procento_nebo_pocet = "pocet"
 
 
     print("redukuj_kategorie_pri_nizkych_poctech(): PROBÍHÁ PŘÍPRAVA DAT...")
@@ -616,42 +816,339 @@ def redukuj_kategorie_pri_nizkych_poctech(data, hodnota, hlidany_sloupec):
 
     for hodnota in list_unikatnich_hodnot:
         #pocet = data[hlidany_sloupec].value_counts()[str(hodnota)]
-        if hodnota == "Correction" or hodnota == "Proceedings Paper" or hodnota == "Review" or hodnota =="Letter" or hodnota == "Retraction":
-            continue
-        else:
-            pocet = len(data[data[hlidany_sloupec] == str(hodnota)])
-            if pocet < minimalni_potrebny_pocet:
-                data.drop(data[data[hlidany_sloupec] == str(hodnota)].index, inplace=True)
+        # if hodnota == "Correction" or hodnota == "Proceedings Paper" or hodnota == "Review" or hodnota =="Letter" or hodnota == "Retraction":
+        #     continue
+        # else:
+        #     pocet = len(data[data[hlidany_sloupec] == str(hodnota)])
+        #     if pocet < minimalni_potrebny_pocet:
+        #         data.drop(data[data[hlidany_sloupec] == str(hodnota)].index, inplace=True)
+        pocet = len(data[data[hlidany_sloupec] == str(hodnota)])
+        if pocet < minimalni_potrebny_pocet:
+            data.drop(data[data[hlidany_sloupec] == str(hodnota)].index, inplace=True)
 
     
     return data
 
 
+def porovnej_faktory(data, faktor, indikator, test):
+    """"Funkce vypočítá průměry pro indikátor jednak v případě, že je zastoupený faktor a zároveň v případě, že faktor není zastoupený v dokumentu.
+        Současně počítá i test významnosti. Metoda testu může být buď studentův t-test nebo mann-withney test, případně wilcoxon test.
+        Funkce neumí vizualizaci. Funkce funguje na zavolání pouze pro jeden faktor a jeden indikátor. Pro analýzu všech indikátoru, využij funkci "vizualizace_vliv_faktoru_na_hodnotu_indikatoru", která umí i vizualizovat výsledek
+    """
+
+    
+    data[indikator] = data[indikator].astype(np.float64) 
+    #data[indikator] = np.log(data[indikator] + 1)
+    data.dropna(subset = [indikator], inplace=True)
+    print("printuju data pro jonáše:")
+    print(len(data))
+    df_group1 = data.loc[data[faktor] == True]
+    df_group2 = data.loc[data[faktor] == False]
+
+    df_group_nula = data.loc[data[indikator] == 0]
+    print(len(data))
+    
+    print("počet nul:", len(df_group_nula))
+    
+    # df_group1[indikator] = np.log(1 + df_group1[indikator])
+    # df_group2[indikator] = np.log(1 + df_group2[indikator])
+
+    group1 = df_group1[indikator].to_numpy()
+    group2 = df_group2[indikator].to_numpy()
+    
+    #print("Délka:",len(group1), len(group2))
+
+    p = spocti_test_vyznamnosti(group1=group1, group2=group2, test = test)
+
+    #print(faktor, "-", indikator)
+    print("P-value:", p)
+    print("Průměr -> False:" , group2.mean()) #False
+    print("Průměr -> True:" , group1.mean()) #True
+    
+    print("Počet -> False:", len(group2))
+    print("Počet -> True:", len(group1))
+
+
+    # # print(np.exp(group2.mean()))
+    # # print(np.exp(group1.mean()))
+
+    # print(gmean(1+group2))
+    # print(gmean(1+group1))
+
+    # plt.hist(data[indikator], bins=550, density=True, alpha=0.5, color='b')
+    # plt.show()
+
+def spocti_test_vyznamnosti(group1, group2, test):
+    """
+    Funkce je součástí ostatních funkcí, ručně se nevola. Funkce počítá test významnosti mezi dvěma průměry. Zjištuje tedy, zdali sledovaný faktor má významný vliv. 
+    Na vstupu jsou dvě množiny dat - hodnot indikátoru (první kde je faktor přítomný, druhá, kde faktor není přítomný) a dále test což určuje metodu významnosti, která se má použít.
+    """
+    if test == "t-test":
+        #print(np.var(group1), "/", np.var(group2), "=", np.var(group1)/np.var(group2))
+        # print("-----------------------------------------")
+        vetsi = max(np.var(group1), np.var(group2))
+        mensi = min(np.var(group1), np.var(group2))
+        if vetsi / mensi < 4:
+            eq_var = True
+        else:
+            eq_var = False
+        #https://www.statology.org/two-sample-t-test-python/
+        a = stats.ttest_ind(a=group1, b=group2, equal_var=eq_var)
+        p = a.pvalue
+
+        return p
+
+
+    if test == "wilcoxon":
+        stat, p = wilcoxon(group1, group2)
+        return p
+    
+    if test == "mannwhitneyu":
+        stat, p = mannwhitneyu(group1, group2)
+        #print("p-value:", p)
+        return p
+
+
+def vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, research_area = ""):
+    
+    
+
+    indikatory_list = [
+        "pole_TC","tweetovani_altmetrics", "fb_altmetrics", "blogy_altmetrics",
+        "zpravy_altmetrics", "reddit_altmetrics", "video_altmetrics", "mendeley_altmetrics", 
+        "score_altmetrics", "capture_plumx", "mentions_plumx", "socialMedia_plumx", "usage_plumx"]
+    
+    # indikatory_list = [
+    #     "fb_altmetrics", "blogy_altmetrics",
+    #     "reddit_altmetrics", "video_altmetrics","mentions_plumx"]
+
+    pracovni_df_pro_faktor = pd.DataFrame(columns = ['Ind', 'Prumer_True', 'Prumer_False', 'Pocet_True', 'Pocet_False'])
+
+
+    for indikator in indikatory_list:
+
+        data = df.copy(deep=True) #nechci sahat na originální dataframe, tak si ho radši zkopíruji
+
+        data[indikator] = data[indikator].astype(np.float64)
+        data.dropna(subset = [indikator], inplace=True) #odstraní všechny NaN hodnoty/řádky
+        df_group1 = data.loc[data[faktor] == True] #vyfiltruji si do nového df řádky jen ty, kde má sledovaný faktor hodnotu true
+        df_group2 = data.loc[data[faktor] == False]
+        group1 = df_group1[indikator].to_numpy() #z celého dataframu si beru jen a pouze hodnoty indikátoru a převádím je na numpy pole
+        group2 = df_group2[indikator].to_numpy()
+        prumer_True_hodnot = group1.mean() #počítá průměr ze všech hodnot, pro které je faktor True
+        prumer_False_hodnot = group2.mean() #počítá průměr ze všech hodnot, pro které je faktor False
+        pocet_True_hodnot = len(group1)
+        pocet_False_hodnot = len(group2)
+        t_test = spocti_test_vyznamnosti(group1=group1, group2=group2, test ="t-test")
+
+        pracovni_df_pro_faktor = pracovni_df_pro_faktor.append({'Ind' : indikator, 'Prumer_True' : prumer_True_hodnot, 'Prumer_False' : prumer_False_hodnot, 't-test': t_test, 'Pocet_True' : pocet_True_hodnot, 'Pocet_False': pocet_False_hodnot}, ignore_index = True)
+
+        del data #po iteraci odstraním nový dataframe s tím, že při příští iteraci se zase vytvoří novější z originálního dataframu (kdybych ho neodstranil, tak ty změny si bude pamatovat)
+    
+    #print(pracovni_df_pro_faktor)
+
+    # pracovni_df_pro_faktor.set_index('Ind', inplace=True)
+    # pracovni_df_pro_faktor = pracovni_df_pro_faktor.T
+    # pracovni_df_pro_faktor.reset_index(inplace=True)
+    # #pracovni_df_pro_faktor.set_index('index', inplace=True)
+    # pracovni_df_pro_faktor.drop([2,3], axis=0, inplace=True)
+    # pracovni_df_pro_faktor.set_index('index', inplace=True)
+    # pracovni_df_pro_faktor["Prumer_True"] = pracovni_df_pro_faktor["Prumer_True"].astype(np.float64)
+    # pracovni_df_pro_faktor["Prumer_False"] = pracovni_df_pro_faktor["Prumer_False"].astype(np.float64)
+
+    
+    #vizualization part.. hooorayy!! (..sarcasm.. yeah.)
+    if typ_grafu == "typ_1":    
+
+        pracovni_df_pro_faktor["soucet_pracovni"] = pracovni_df_pro_faktor["Prumer_True"] + pracovni_df_pro_faktor["Prumer_False"]
+        pracovni_df_pro_faktor.sort_values(by='soucet_pracovni', ascending=False, inplace=True)
+        pracovni_df_pro_faktor.drop(['soucet_pracovni'], axis = 1, inplace=True)
+
+        #xa = [1,2,3,4,5,6,7,8,9,10,11,12,13]
+        #xa = [9,18, 27 , 36 , 45, 54 ,63,72,81 , 90 , 99 ,108, 117]
+        #xa = [8,16,24,32,40,48, 56, 64, 72, 80, 88, 96,104]
+        xa = [10,20,30,40,50,60,70,80,90,100,110,120,130]
+
+        #xa = [10,20,30,40,50]
+        x = np.array(xa)
+        x= x/3 #ZDE ZMĚN PRO PŘIZPŮSOBENÍ VELIKOSTI GRAFU
+        y1 = pracovni_df_pro_faktor["Prumer_True"].to_numpy()
+        y2 = pracovni_df_pro_faktor["Prumer_False"].to_numpy()
+
+        
+        n = pracovni_df_pro_faktor["Pocet_True"].to_numpy()
+        n2 = pracovni_df_pro_faktor["Pocet_False"].to_numpy()
+        n = np.append(n, n2)
+        aa = (n - 0) / (np.max(n) - 0)
+        #aa = (n - np.min(n)) / (np.max(n) - np.min(n))
+        aa = aa
+
+        counts_array = np.array_split(aa, 2)
+
+        pocet1 = counts_array[0]
+        pocet2 = counts_array[1]
+        print(pocet1)
+        print(pocet2)
+        list_of_single_column_Ind = pracovni_df_pro_faktor['Ind'].tolist()
+        print(list_of_single_column_Ind)
+
+
+        # plot data in grouped manner of bar type
+        plt.figure(figsize=(16.5,5))
+        sloup1 = plt.bar(x-pocet1, y1, width=pocet1*2) #přidal jsem proměnnou sloup1 aby si to pamatovalo její pozici pro přidání anotace
+        sloup2 = plt.bar(x+pocet2, y2, width=pocet2*2)
+        plt.xticks(x, list_of_single_column_Ind, rotation=90, fontsize=9)
+        plt.xlabel("Indikátory")
+        plt.ylabel("Průměr")
+        plt.legend(["True", "False"])
+        plt.tight_layout()     # tohle zařídí aby byly vidět popisky osy x
+        plt.subplots_adjust(left=None, bottom=None, right=None, top=0.909, wspace=None, hspace=None) #toto nastavuje výšku šířku (stejnak jako to tlačíko na vygenerovaném grafu)
+        # plt.bar_label(plt.containers[0], label_type='edge')
+        plt.bar_label(sloup1, label_type='edge', rotation=90, fontsize=10, fmt='%.3f', padding=3)
+        plt.bar_label(sloup2, label_type='edge', rotation=90, fontsize=10, fmt='%.3f', padding=3)
+        plt.title("Vliv faktoru " + '"' + faktor + '" ' + research_area )
+
+        plt.show()
+
+
+    if typ_grafu == "typ_2":
+        pracovni_df_pro_faktor.drop(['t-test'], axis = 1, inplace=True)
+        pracovni_df_pro_faktor.rename(columns = {'Prumer_True':'True', 'Prumer_False':'False'}, inplace = True)
+        pracovni_df_pro_faktor.set_index('Ind', inplace=True)
+        pracovni_df_pro_faktor = pracovni_df_pro_faktor.T
+        pracovni_df_pro_faktor.reset_index(inplace=True)
+        #pracovni_df_pro_faktor.set_index('index', inplace=True)
+        pracovni_df_pro_faktor.drop([2,3], axis=0, inplace=True)
+        #pracovni_df_pro_faktor.set_index('index', inplace=True)
+        # pracovni_df_pro_faktor["Prumer_True"] = pracovni_df_pro_faktor["Prumer_True"].astype(np.float64)
+        # pracovni_df_pro_faktor["Prumer_False"] = pracovni_df_pro_faktor["Prumer_False"].astype(np.float64)
+
+        print(pracovni_df_pro_faktor)
 
 
 
+        #df_pro_graf = pracovni_df_pro_faktor.copy(deep=True)
+        #pracovni_df_pro_faktor.drop([2,3], axis=0, inplace=True)
+        #print(pracovni_df_pro_faktor)
+
+        # sns.set()
+        custom_params = {"axes.spines.right": False, "axes.labelsize":8}
+        sns.set_theme(style="white", rc=custom_params)
+        
+
+        x_radku = 5
+        y_sloupcu = 3
+        fig, axes = plt.subplots(nrows=x_radku, ncols=y_sloupcu, sharex=True) #define plotting region (x rows, y columns)
+        
+        #create boxplot in each subplot
+        count_radek = 0
+        count_sloupec = 0
+        count = 0
+        for value in indikatory_list:
+            count_sloupec = count
+            if count_sloupec == y_sloupcu: #když to narazí na poslední fig v řadě, začne to přidávat do figů v druhé řadě
+                count_sloupec = 0
+                count = 0
+                count_radek += 1 
+
+            g1 = sns.barplot(x=pracovni_df_pro_faktor['index'], y=pracovni_df_pro_faktor[value], ax=axes[count_radek,count_sloupec])
+            #g1.set(xticklabels=[])
+            g1.set(xlabel=None)
+            g1.bar_label(g1.containers[0], label_type='edge', fontsize=10, fmt='%.3f', padding=-12)
+            g1.set_yticklabels(g1.get_yticks(), size = 8)
+            
+            widthbars = [0.3, 1] #nastavuje šířku sloupců
+            for bar, newwidth in zip(g1.patches, widthbars):
+                x = bar.get_x()
+                width = bar.get_width()
+                centre = x + width/2.
+                bar.set_x(centre - newwidth/2.)
+                bar.set_width(newwidth)
+
+             
+
+
+
+            count += 1
+
+        plt.tight_layout() 
+
+        sns.despine(left=True) # přizpůsobuje desing grafu - odstraní ohraničení 
+        #sns.despine(offset=10, trim=True)
+        fig.supylabel('Průměr hodnot indikátoru', fontsize = 12)
+        plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+#porovnej_faktory(df, "mezinarodni_spoluprace", "usage_plumx", "t-test")
 
 #========================================================================================
-#faktory = ["typ_dokumentu","pole_LA","pocet_autoru", "interdisciplinarita", "open_access", "pole_PG", "Flesch", "pocet_slov_AB", "pocet_slov_TI", "funding", ] #"mezinarodni_spoluprace"
+#faktory = ["typ_dokumentu","pole_LA","pocet_autoru", "interdisciplinarita", "open_access", "pocet_str", "flesch", "pocet_slov_AB", "pocet_slov_TI", "funding", "mezinarodni_spoluprace"]
 #indikatory = ["pole_TC","tweetovani_altmetrics", "fb_altmetrics", "blogy_altmetrics", "zpravy_altmetrics", "reddit_altmetrics", "video_altmetrics", "mendeley_altmetrics", "score_altmetrics", "capture_plumx", "citation_plumx", "mentions_plumx", "socialMedia_plumx", "usage_plumx"]
-
+#faktor = ["open_access", "mezinarodni_spoluprace", "interdisciplinarita", "funding"]
+#zkouska_logaritmus(df, "typ_dokumentu", "mendeley_altmetrics")
 
 ###r = zjisti_vlivne_faktory(df, "tweetovani_altmetrics", "list_LA", False)
 
-#zjisti_vlivne_faktory(df, "mendeley_altmetrics", "open_access", False)
+#zjisti_vlivne_faktory(df, "pole_TC", "typ_dokumentu", False)
 
 #cyklus_vlivne_faktory(zjisti_vlivne_faktory, df, False)
 
 #-------------------------------------------------------------
 
+# for f in faktor:
+#     porovnej_faktory(df, f, "usage_plumx", "mannwhitneyu")
+#porovnej_faktory(df, "open_access", "mendeley_altmetrics", "t-test") 
+#porovnej_faktory(df, "open_access", "tweetovani_altmetrics", "t-test")
 
 
-#zjisti_podil_dokumentu_v_agregatorech(df, groupby="funding", vizualizace=True)#, minimum_clanku=1) #"research_categories, list_DT") 
+df_social_sciences = df.loc[df['research_areas'] == 'Social Sciences']
+df_technology = df.loc[df['research_areas'] == 'Technology']
+df_Physical_sciencese = df.loc[df['research_areas'] == 'Physical Sciences']
+df_Life_biomedicine = df.loc[df['research_areas'] == 'Life Sciences & Biomedicine']
+df_Arts_Humanities = df.loc[df['research_areas'] == 'Arts & Humanities']
+
+df02_social_sciences = df02.loc[df02['research_areas'] == 'Social Sciences']
+df02_technology = df02.loc[df02['research_areas'] == 'Technology']
+df02_Physical_sciencese = df02.loc[df02['research_areas'] == 'Physical Sciences']
+df02_Life_biomedicine = df02.loc[df02['research_areas'] == 'Life Sciences & Biomedicine']
+df02_Arts_Humanities = df02.loc[df02['research_areas'] == 'Arts & Humanities']
 
 
-#disciplinary_and_time_differences(data=df, indikator="pole_TC", groupby="funding", median_or_mean="mean", minimum_clanku=1)
 
-#zjisti_korelaci(df, "pole_TC", "mendeley_altmetrics",  typ_korelace="pearson", vizualizace=True, minimum_clanku=1, group_by="typ_dokumentu")
+
+vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, "open_access", "typ_2" , "/ Social Sciences")
+
+#get_different_rows(df_Life_biomedicine, df02_Life_biomedicine, "usage_plumx")
+
+#print(df_social_sciences)
+
+#zjisti_podil_dokumentu_v_agregatorech(df02, vizualizace=True)#, minimum_clanku=1) #"research_categories, list_DT") 
+#zjisti_podil_dokumentu_v_agregatorech(df_technology, groupby="kategorie_WC", vizualizace=True, minimum_clanku=3)
+
+#disciplinary_and_time_differences(data=df, indikator="pole_TC", groupby="kategorie_WC", median_or_mean="mean", minimum_clanku=1)
+
+# indikator = "usage_plumx"
+# faktor = "open_access"
+#indikatory = ["pole_TC","tweetovani_altmetrics", "fb_altmetrics", "blogy_altmetrics", "zpravy_altmetrics", "reddit_altmetrics", "video_altmetrics", "mendeley_altmetrics", "score_altmetrics", "capture_plumx", "citation_plumx", "mentions_plumx", "socialMedia_plumx", "usage_plumx"]
+#indikatory = ["score_altmetrics", "capture_plumx", "mentions_plumx", "socialMedia_plumx", "usage_plumx"]
+
+#zjisti_korelaci(df_Life_biomedicine, "pole_TC", "usage_plumx",  typ_korelace="pearson", vizualizace=False, group_by="funding", zjisti_p_value=False)#, minimum_clanku = 80)#, top_hodnoty=5)
+
+# zjisti_korelaci(df_social_sciences, "pole_TC", indikator,  typ_korelace="pearson", vizualizace=False, group_by=faktor, zjisti_p_value=True)#, minimum_clanku = 80, top_hodnoty=5)
+# zjisti_korelaci(df_technology, "pole_TC", indikator,  typ_korelace="pearson", vizualizace=False, group_by=faktor, zjisti_p_value=True)#, minimum_clanku = 80, top_hodnoty=5)
+# zjisti_korelaci(df_Physical_sciencese, "pole_TC", indikator,  typ_korelace="pearson", vizualizace=False, group_by=faktor, zjisti_p_value=True)#, minimum_clanku = 80, top_hodnoty=5)
+# zjisti_korelaci(df_Life_biomedicine, "pole_TC", indikator,  typ_korelace="pearson", vizualizace=False, group_by=faktor, zjisti_p_value=True)#, minimum_clanku = 80, top_hodnoty=5)
 
 
 #faktory = ["typ_dokumentu","pole_LA", "interdisciplinarita", "open_access", "funding", "mezinarodni_spoluprace", "kategorie_WC"]
@@ -659,3 +1156,4 @@ def redukuj_kategorie_pri_nizkych_poctech(data, hodnota, hlidany_sloupec):
 
 
 #zjisti_korelaci(df, "pole_TC", "usage_plumx",  typ_korelace="pearson", vizualizace=False, minimum_clanku=1, group_by=faktor)
+
