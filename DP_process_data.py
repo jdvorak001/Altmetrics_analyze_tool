@@ -525,7 +525,7 @@ def mapovani_vyzkumnych_oblasti(field):
 
 #výstup z této funkce je string odpověď z API. Tento výstup slouží jako vstup pro funkci "zpracovani_api_odpovedi"
 def api_altmetrics_call(doi):
-    api_key = "DOPLŇ SVOJE"
+    api_key="6aef862ef76c485d84f256d75150f486"
 
     api_url_clanku = "https://api.altmetric.com/v1/doi/" + str(doi) + "?key=" + api_key
     response = requests.get(api_url_clanku)
@@ -558,7 +558,7 @@ def api_altmetrics_call(doi):
 
 
 def api_plumx_call(doi):
-    api_key = "DOPLŇ SVOJE"
+    api_key = "76033570136eefe7414630f354bff245"
 
     api_url_clanku = "https://api.elsevier.com/analytics/plumx/doi/" + str(doi) + "?apiKey=" + api_key
 
@@ -595,6 +595,6 @@ def zpracovani_api_odpovedi(odpoved, *args):
         return "0"
    
 
-zpracuj_slozku(r"C:\Users\UKUK\Desktop\DP Altmetrie\Script\Data_WoS\\", altmetrics_on=True, plumX_on=True, nazev_generovaneho_souboru="real_data", start_from=0) #dvě lomítka jsou ve skutečnosti jedno lomítko
+zpracuj_slozku(r"C:\Users\UKUK\Desktop\DP Altmetrie\Script\Data_WoS\\", altmetrics_on=True, plumX_on=True, nazev_generovaneho_souboru="real_data_druhe_stazeni", start_from=0) #dvě lomítka jsou ve skutečnosti jedno lomítko
 #zpracuj_soubor(r"C:\Users\UKUK\Desktop\DP Altmetrie\Script\Data_WoS\test_SC.txt")
 
