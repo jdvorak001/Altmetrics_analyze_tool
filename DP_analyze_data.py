@@ -1012,27 +1012,53 @@ def vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, resear
 
 
     if typ_grafu == "typ_2":
+
+        pct_change_df = pd.DataFrame(columns = ["Ind","pct_change"])
+        for index, row in pracovni_df_pro_faktor.iterrows():
+            # print(row)
+            # print(row["Prumer_True"], row["Prumer_False"])
+            max_num = max(row["Prumer_True"], row["Prumer_False"])
+            min_num = min(row["Prumer_True"], row["Prumer_False"])
+            index = row["Ind"]
+            pct_change = ((max_num-min_num)/min_num)*100
+            pct_change_df = pct_change_df.append({'Ind' : index, 'pct_change' : pct_change}, ignore_index = True)
+
+
+        #print(pct_change_df)
+
+
+        pracovni_df_pro_faktor = pd.merge(pracovni_df_pro_faktor, pct_change_df, on='Ind')
+        print(pracovni_df_pro_faktor)
+        pracovni_df_pro_faktor.sort_values(by='pct_change', ascending=False, inplace=True)
+        
+        pracovni_df_legenda = pracovni_df_pro_faktor.copy(deep=True)
+        pracovni_df_legenda.set_index("Ind", inplace=True)
+        print("pracovni_df_legenda")
+        print(pracovni_df_legenda)
+
+        pracovni_df_pro_faktor.drop(['pct_change'], axis = 1, inplace=True)    
+
+        list_of_single_column_Ind = pracovni_df_pro_faktor['Ind'].tolist()
+
+
         pracovni_df_pro_faktor.drop(['t-test'], axis = 1, inplace=True)
         pracovni_df_pro_faktor.rename(columns = {'Prumer_True':'True', 'Prumer_False':'False'}, inplace = True)
         pracovni_df_pro_faktor.set_index('Ind', inplace=True)
         pracovni_df_pro_faktor = pracovni_df_pro_faktor.T
         pracovni_df_pro_faktor.reset_index(inplace=True)
-        #pracovni_df_pro_faktor.set_index('index', inplace=True)
+        df_s_pocetem_hodnot = pracovni_df_pro_faktor.copy(deep=True)
         pracovni_df_pro_faktor.drop([2,3], axis=0, inplace=True)
-        #pracovni_df_pro_faktor.set_index('index', inplace=True)
-        # pracovni_df_pro_faktor["Prumer_True"] = pracovni_df_pro_faktor["Prumer_True"].astype(np.float64)
-        # pracovni_df_pro_faktor["Prumer_False"] = pracovni_df_pro_faktor["Prumer_False"].astype(np.float64)
-
-        print(pracovni_df_pro_faktor)
 
 
+        df_s_pocetem_hodnot.set_index('index', inplace=True)
+        df_s_pocetem_hodnot = df_s_pocetem_hodnot.T
 
-        #df_pro_graf = pracovni_df_pro_faktor.copy(deep=True)
-        #pracovni_df_pro_faktor.drop([2,3], axis=0, inplace=True)
-        #print(pracovni_df_pro_faktor)
+
+
+
 
         # sns.set()
-        custom_params = {"axes.spines.right": False, "axes.labelsize":8}
+        custom_params = {"axes.spines.right": False, "axes.labelsize":8, 'legend.title_fontsize': 'xx-small'}
         sns.set_theme(style="white", rc=custom_params)
         
 
@@ -1043,8 +1069,9 @@ def vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, resear
         #create boxplot in each subplot
         count_radek = 0
         count_sloupec = 0
-        count = 0
-        for value in indikatory_list:
+        count = 0 #pro vykreslování do subplotů
+        count2 = 0 #pro šířku sloupců
+        for value in list_of_single_column_Ind:
             count_sloupec = count
             if count_sloupec == y_sloupcu: #když to narazí na poslední fig v řadě, začne to přidávat do figů v druhé řadě
                 count_sloupec = 0
@@ -1056,9 +1083,28 @@ def vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, resear
             g1.set(xlabel=None)
             g1.bar_label(g1.containers[0], label_type='edge', fontsize=10, fmt='%.3f', padding=-12)
             g1.set_yticklabels(g1.get_yticks(), size = 8)
-            
-            widthbars = [0.3, 1] #nastavuje šířku sloupců
-            for bar, newwidth in zip(g1.patches, widthbars):
+            #g1.text(0, 0, "Ahoj kámo", fontsize= 7, horizontalalignment='right', verticalalignment='top')
+            #g1.text(0.5, 0.5, 'matplotlib', horizontalalignment='center', verticalalignment='center')
+
+            pct = pracovni_df_legenda.at[value,'pct_change']
+            pct = "{0:.2f}".format(pct)
+            g1.legend([],[],title='změna: ' + str(pct) +"%", loc = 'upper right', frameon=False)#, fontsize=0.5)
+            n = df_s_pocetem_hodnot["Pocet_True"].to_numpy()
+            n2 = df_s_pocetem_hodnot["Pocet_False"].to_numpy()
+            n = np.append(n, n2)
+            aa = (n - 0) / (np.max(n) - 0) # tenhle řádek přepočítává hodnoty na interval mezi 0 a 1 
+            #aa = (n - np.min(n)) / (np.max(n) - np.min(n))
+
+            counts_array = np.array_split(aa, 2)
+
+            pocet1 = counts_array[0]
+            pocet2 = counts_array[1]
+
+            bar1_width = pocet1[count2]
+            bar2_width = pocet2[count2]
+                
+            widthbars = [bar1_width, bar2_width] #udává šířku sloupců
+            for bar, newwidth in zip(g1.patches, widthbars): #forcyklus nastavuje udanou šířku sloupcům
                 x = bar.get_x()
                 width = bar.get_width()
                 centre = x + width/2.
@@ -1067,9 +1113,8 @@ def vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, resear
 
              
 
-
-
-            count += 1
+            count += 1 #pro vykreslování do subplotů
+            count2 +=1 #pro šířku sloupců
 
         plt.tight_layout() 
 
@@ -1077,13 +1122,6 @@ def vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, resear
         #sns.despine(offset=10, trim=True)
         fig.supylabel('Průměr hodnot indikátoru', fontsize = 12)
         plt.show()
-
-
-
-
-
-
-
 
 
 
