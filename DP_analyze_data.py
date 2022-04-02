@@ -5,6 +5,7 @@ from pandas.core.frame import DataFrame
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.cm as cm
 from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
 from scipy.stats.stats import pearsonr
@@ -914,9 +915,9 @@ def vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, resear
     
 
     indikatory_list = [
-        "pole_TC","tweetovani_altmetrics", "fb_altmetrics", "blogy_altmetrics",
+        "tweetovani_altmetrics", "fb_altmetrics", "blogy_altmetrics",
         "zpravy_altmetrics", "reddit_altmetrics", "video_altmetrics", "mendeley_altmetrics", 
-        "score_altmetrics", "capture_plumx", "mentions_plumx", "socialMedia_plumx", "usage_plumx"]
+        "score_altmetrics", "capture_plumx", "mentions_plumx", "socialMedia_plumx", "usage_plumx"] #pole_TC
     
     # indikatory_list = [
     #     "fb_altmetrics", "blogy_altmetrics",
@@ -1017,10 +1018,11 @@ def vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, resear
         for index, row in pracovni_df_pro_faktor.iterrows():
             # print(row)
             # print(row["Prumer_True"], row["Prumer_False"])
-            max_num = max(row["Prumer_True"], row["Prumer_False"])
-            min_num = min(row["Prumer_True"], row["Prumer_False"])
+            # max_num = max(row["Prumer_True"], row["Prumer_False"])
+            # min_num = min(row["Prumer_True"], row["Prumer_False"])
             index = row["Ind"]
-            pct_change = ((max_num-min_num)/min_num)*100
+            # pct_change = ((max_num-min_num)/min_num)*100
+            pct_change = ((row["Prumer_True"] - row["Prumer_False"])/row["Prumer_False"])*100
             pct_change_df = pct_change_df.append({'Ind' : index, 'pct_change' : pct_change}, ignore_index = True)
 
 
@@ -1039,7 +1041,10 @@ def vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, resear
         pracovni_df_pro_faktor.drop(['pct_change'], axis = 1, inplace=True)    
 
         list_of_single_column_Ind = pracovni_df_pro_faktor['Ind'].tolist()
-
+        non_significatn_values = pracovni_df_pro_faktor[pracovni_df_pro_faktor['t-test']>=0.05]['Ind']
+        
+        list_non_significatn_values = non_significatn_values.tolist()
+        
 
         pracovni_df_pro_faktor.drop(['t-test'], axis = 1, inplace=True)
         pracovni_df_pro_faktor.rename(columns = {'Prumer_True':'True', 'Prumer_False':'False'}, inplace = True)
@@ -1058,12 +1063,12 @@ def vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, resear
 
 
         # sns.set()
-        custom_params = {"axes.spines.right": False, "axes.labelsize":8, 'legend.title_fontsize': 'xx-small'}
+        custom_params = {"axes.spines.right": False, "axes.labelsize":8, 'legend.title_fontsize': 'xx-small', 'figure.figsize':(6,10)}
         sns.set_theme(style="white", rc=custom_params)
         
 
-        x_radku = 5
-        y_sloupcu = 3
+        x_radku = 6
+        y_sloupcu = 2
         fig, axes = plt.subplots(nrows=x_radku, ncols=y_sloupcu, sharex=True) #define plotting region (x rows, y columns)
         
         #create boxplot in each subplot
@@ -1078,22 +1083,31 @@ def vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, resear
                 count = 0
                 count_radek += 1 
 
-            g1 = sns.barplot(x=pracovni_df_pro_faktor['index'], y=pracovni_df_pro_faktor[value], ax=axes[count_radek,count_sloupec])
+            if value in list_non_significatn_values:
+                g1 = sns.barplot(x=pracovni_df_pro_faktor['index'], y=pracovni_df_pro_faktor[value], ax=axes[count_radek,count_sloupec], color="silver") #ZMĚNA BARVY V PŘÍPADĚ ŽE T-TEST JE VYŠŠÍ NEŽ 0.05
+            else:
+                g1 = sns.barplot(x=pracovni_df_pro_faktor['index'], y=pracovni_df_pro_faktor[value], ax=axes[count_radek,count_sloupec]) 
+            #g1 = sns.barplot(x=pracovni_df_pro_faktor['index'], y=pracovni_df_pro_faktor[value], ax=axes[count_radek])
+
             #g1.set(xticklabels=[])
             g1.set(xlabel=None)
-            g1.bar_label(g1.containers[0], label_type='edge', fontsize=10, fmt='%.3f', padding=-12)
+            
+            g1.bar_label(g1.containers[0], label_type='edge', fontsize=10, fmt='%.3f', padding=-7)
             g1.set_yticklabels(g1.get_yticks(), size = 8)
+            g1.set_ylabel(g1.get_ylabel(), fontsize=7, labelpad=1.5)  #rotation=70 #NASTAVENÍ LABELU U OSY Y
+            
             #g1.text(0, 0, "Ahoj kámo", fontsize= 7, horizontalalignment='right', verticalalignment='top')
             #g1.text(0.5, 0.5, 'matplotlib', horizontalalignment='center', verticalalignment='center')
 
             pct = pracovni_df_legenda.at[value,'pct_change']
             pct = "{0:.2f}".format(pct)
-            g1.legend([],[],title='změna: ' + str(pct) +"%", loc = 'upper right', frameon=False)#, fontsize=0.5)
+            g1.legend([],[],title='změna: '+ "\n" + str(pct) +"%", loc = 'center', frameon=False)#, fontsize=0.5)  loc=#upper right #best
             n = df_s_pocetem_hodnot["Pocet_True"].to_numpy()
             n2 = df_s_pocetem_hodnot["Pocet_False"].to_numpy()
             n = np.append(n, n2)
             aa = (n - 0) / (np.max(n) - 0) # tenhle řádek přepočítává hodnoty na interval mezi 0 a 1 
             #aa = (n - np.min(n)) / (np.max(n) - np.min(n))
+            #aa = (n - 0) / (4030 - 0)
 
             counts_array = np.array_split(aa, 2)
 
@@ -1116,17 +1130,208 @@ def vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, resear
             count += 1 #pro vykreslování do subplotů
             count2 +=1 #pro šířku sloupců
 
-        plt.tight_layout() 
+        #plt.tight_layout() 
 
         sns.despine(left=True) # přizpůsobuje desing grafu - odstraní ohraničení 
         #sns.despine(offset=10, trim=True)
-        fig.supylabel('Průměr hodnot indikátoru', fontsize = 12)
+        #fig.supylabel('Průměr hodnot indikátoru', fontsize = 12)
+        #plt.subplots_adjust(left=None, bottom=0.076, right=0.276, top=0.966, wspace=None, hspace=None)
+        plt.suptitle("Vliv '" + str(faktor) + "' na indikátory / " + str(research_area))
+        #plt.figure(figsize=(1,4), dpi=400)
         plt.show()
+        
+        #plt.savefig('destination_path.png', format='png', dpi=500)
+
+
+def vizualizace_zmena_hodnot_indikatoru_po_druhem_mereni(data1, data2):
+    pracovni_df_pro_faktor = pd.DataFrame(columns = ["prvni_mereni","druhy_mereni"])
+    df_rozdily_indikatoru = pd.DataFrame()
+    
+    indikatory_list = [
+        "tweetovani_altmetrics", "fb_altmetrics", "blogy_altmetrics",
+        "zpravy_altmetrics", "reddit_altmetrics", "video_altmetrics", "mendeley_altmetrics", 
+        "score_altmetrics", "capture_plumx", "mentions_plumx", "socialMedia_plumx", "usage_plumx"] #"pole_TC"
+
+    for ind in indikatory_list:
+        pracovni_df_pro_faktor["prvni_mereni"] = data1[ind].copy()
+        pracovni_df_pro_faktor["druhy_mereni"] = data2[ind].copy()
+        # pracovni_df_pro_faktor.dropna(subset = ["prvni_mereni"], inplace=True) #odstraňujě NaN hodnoty
+        # pracovni_df_pro_faktor.dropna(subset = ["druhy_mereni"], inplace=True) #odstraňujě NaN hodnoty
+
+
+        pracovni_df_pro_faktor["prvni_mereni"] = pracovni_df_pro_faktor["prvni_mereni"].astype('float')
+        pracovni_df_pro_faktor["druhy_mereni"] = pracovni_df_pro_faktor["druhy_mereni"].astype('float')
+
+
+ #       pracovni_df_pro_faktor["rozdil_" + str(ind)] = pracovni_df_pro_faktor["druhy_mereni"] - pracovni_df_pro_faktor["prvni_mereni"]
+        df_rozdily_indikatoru["rozdil_" + str(ind)] = pracovni_df_pro_faktor["druhy_mereni"] - pracovni_df_pro_faktor["prvni_mereni"]
+
+
+
+    #df_rozdily_indikatoru.dropna(subset = ["rozdil_usage_plumx"], inplace=True)
+    # print(pracovni_df_pro_faktor)
+    #print(df_rozdily_indikatoru.head(20))
+    # df_rozdily_indikatoru = df_rozdily_indikatoru.T
+    #df_rozdily_indikatoru['poradi'] = df_rozdily_indikatoru.index
+    for col in df_rozdily_indikatoru:
+        df_rozdily_indikatoru[col] = df_rozdily_indikatoru[col].sort_values(ignore_index=True)#, ascending=False)
+#    print(df_rozdily_indikatoru)
+    df_melted = df_rozdily_indikatoru.melt(var_name='indikator')
+    #df_melted = df_melted[df_melted.value != 0]
+    df_melted.dropna(subset = ["value"], inplace=True)
+
+    
+    #df_melted["value"] = df_melted["value"].astype('int')
+    #df_melted = df_melted.drop_duplicates(subset=['value'], keep='first')
+
+    gr = df_melted.sort_values('value').groupby('indikator')
+    df_melted['order_within_group'] = gr.cumcount()
+    df_melted.sort_values(['indikator', 'order_within_group'], inplace=True)
+
+    print(df_melted.head(40))
+
+
+
+    # Create a grid : initialize it
+    g = sns.FacetGrid(df_melted, col='indikator', col_wrap=5, sharex=False, sharey=False)
+
+    # Add the line over the area with the plot function
+    g = g.map(plt.plot, 'order_within_group', 'value')
+
+    # Fill the area with fill_between
+    g = g.map(plt.fill_between, 'order_within_group', 'value', alpha=0.2) #.set_titles("{col_name} country")
+
+    # Control the title of each facet
+    #g = g.set_titles("{col_name}")
+
+    # Add a title for the whole plot
+    plt.subplots_adjust(top=0.92)
+    g = g.fig.suptitle('Rozdíl mezi prvním a druhým měřením')
+
+    # Show the graph
+    plt.show()
 
 
 
 
+def pocty_poklesu_a_narustu(source_df, new_df, sledovany_indikator):
+    """Funkce vypočítá pro sledovaný indikátor, v rámci kolika záznamů indikátor poklesl nebo narostl v druhém měření oproti prvnímu měření.
+    Funkce se používá hlavně jako součástí další funkce - nespouští se manuálně. 
+    """
 
+    prepared_source_df = source_df[["doi", sledovany_indikator]]
+    prepared_new_df = new_df[["doi", sledovany_indikator]]
+    
+    #merged_df = prepared_source_df.merge(prepared_new_df, indicator=True, how='outer')
+    merged_df = prepared_source_df.merge(prepared_new_df,on='doi')
+    merged_df.columns = ['doi', 'source_df', 'new_df']
+    merged_df.dropna(subset = ["source_df"], inplace=True)
+    merged_df.dropna(subset = ["new_df"], inplace=True)
+    
+    merged_df['zmena'] = np.where(merged_df['source_df'] == merged_df['new_df'], "stejne", np.where(merged_df['source_df'] >  merged_df['new_df'], "pokles", "narust"))  #vytvoří třetí sloupec s tím jestli byl zaznamenaný pokles nebo nárůst
+
+    #print(merged_df)
+
+    narust = merged_df.loc[merged_df["zmena"] == 'narust', 'zmena'].count()
+    pokles = merged_df.loc[merged_df["zmena"] == 'pokles', 'zmena'].count()
+    stejne = merged_df.loc[merged_df["zmena"] == 'stejne', 'zmena'].count()
+    celkem = narust + pokles + stejne
+
+
+    return narust, pokles, celkem
+    
+
+
+
+    # changed_rows_dataframe = changed_rows_df.drop('_merge', axis=1)
+    # print(changed_rows_dataframe)
+
+def priprav_df_pro_prirustku_a_ubytku(data1, data2):
+    """"
+    Funkce připravuje dataframe pro vizualizaci "klastrovaného stacked barplotu".
+    Na vstup si bere originální dataframe a nově naměřený dataframe. Výstupem pak je připravený dataframe pro další funkci s názvem "plot_clustered_stacked"
+    Tato funkce si volá "pocty_poklesu_a_narustu" k výpočtům poklesů a nárůstů. 
+    Funkce se volá manuálně pro přípravů datafrajmů, a tyto připravené dataframy se poté musejí ručně vložit do funkce "plot_clustered_stacked"
+    """
+    df_pocty_zmen = pd.DataFrame(columns = ["Ind","celkem","narust","pokles"])
+
+    indikatory = ["tweetovani_altmetrics", "fb_altmetrics", "blogy_altmetrics", 
+            "zpravy_altmetrics", "reddit_altmetrics", "video_altmetrics", "mendeley_altmetrics", 
+            "score_altmetrics", "capture_plumx", "citation_plumx", "mentions_plumx", 
+            "socialMedia_plumx", "usage_plumx"]
+    
+    for indikator in indikatory:
+        narust, pokles, celkem = pocty_poklesu_a_narustu(data1, data2, indikator)
+        df_pocty_zmen = df_pocty_zmen.append({'Ind' : indikator, 'celkem' : celkem, 'narust' : narust, 'pokles': pokles}, ignore_index = True)
+    
+
+    df_pocty_zmen["narust_v_pct"] = (df_pocty_zmen["narust"] / df_pocty_zmen["celkem"])*100
+    df_pocty_zmen["pokles_v_pct"] = (df_pocty_zmen["pokles"] / df_pocty_zmen["celkem"])*100
+    
+    df_pocty_zmen.drop(["narust", "pokles", "celkem"], axis=1, inplace=True)
+    df_pocty_zmen.set_index("Ind", inplace=True)
+    print(df_pocty_zmen)
+
+    # df_pocty_zmen.plot(kind='bar', stacked=True, color=['red', 'skyblue'])
+
+    # plt.show()
+
+    return df_pocty_zmen
+
+
+
+
+def plot_clustered_stacked(dfall, labels=None, title="multiple stacked bar plot",  H="/", **kwargs):
+    """Given a list of dataframes, with identical columns and index, create a clustered stacked bar plot. 
+    labels is a list of the names of the dataframe, used for the legend
+    title is a string for the title of the plot
+    H is the hatch used for identification of the different dataframe
+    
+    Převzato a upraveno: https://stackoverflow.com/questions/22787209/how-to-have-clusters-of-stacked-bars-with-python-pandas
+    """
+
+    n_df = len(dfall)
+    n_col = len(dfall[0].columns) 
+    n_ind = len(dfall[0].index)
+    axe = plt.subplot(111)
+
+    for df in dfall : # for each data frame
+        axe = df.plot(kind="bar",
+                      linewidth=0,
+                      stacked=True,
+                      ax=axe,
+                      legend=False,
+                      grid=False,
+                      **kwargs)  # make bar plots
+
+    h,l = axe.get_legend_handles_labels() # get the handles we want to modify
+    for i in range(0, n_df * n_col, n_col): # len(h) = n_col * n_df
+        for j, pa in enumerate(h[i:i+n_col]):
+            for rect in pa.patches: # for each index
+                rect.set_x(rect.get_x() + 1 / float(n_df + 1) * i / float(n_col))
+                rect.set_hatch(H * int(i / n_col)) #edited part     
+                rect.set_width(1 / float(n_df + 1))
+
+    axe.set_xticks((np.arange(0, 2 * n_ind, 2) + 1 / float(n_df + 1)) / 2.)
+    axe.set_xticklabels(df.index, rotation = 0)
+    axe.set_title(title)
+
+    # Add invisible data to add another legend
+    n=[]        
+    for i in range(n_df):
+        n.append(axe.bar(0, 0, color="gray", hatch=H * i))
+
+    l1 = axe.legend(h[:n_col], l[:n_col], loc=[1.01, 0.5])
+    if labels is not None:
+        l2 = plt.legend(n, labels, loc=[1.01, 0.1]) 
+    axe.add_artist(l1)
+
+    plt.show()
+    return axe
+
+
+
+        
 
 #porovnej_faktory(df, "mezinarodni_spoluprace", "usage_plumx", "t-test")
 
@@ -1162,10 +1367,25 @@ df02_Physical_sciencese = df02.loc[df02['research_areas'] == 'Physical Sciences'
 df02_Life_biomedicine = df02.loc[df02['research_areas'] == 'Life Sciences & Biomedicine']
 df02_Arts_Humanities = df02.loc[df02['research_areas'] == 'Arts & Humanities']
 
+#faktory = ["interdisciplinarita", "open_access", "funding", "mezinarodni_spoluprace"]
+faktory = ["open_access", "mezinarodni_spoluprace", "funding", "interdisciplinarita"]
+
+#vizualizace_zmena_hodnot_indikatoru_po_druhem_mereni(df_social_sciences, df02_social_sciences)
+#vizualizace_zmena_hodnot_indikatoru_po_druhem_mereni(df, df02)
+#vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, "interdisciplinarita", "typ_2" , "Celkem")
 
 
+#vizualizace_prirustku_a_ubytku(df, df02)
 
-vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, "open_access", "typ_2" , "/ Social Sciences")
+
+df_social = priprav_df_pro_prirustku_a_ubytku(df_social_sciences, df02_social_sciences)
+df_tech = priprav_df_pro_prirustku_a_ubytku(df_technology, df02_technology)
+df_physic = priprav_df_pro_prirustku_a_ubytku(df_Physical_sciencese, df02_Physical_sciencese)
+
+
+# Then, just call :
+plot_clustered_stacked([df_social, df_tech, df_physic],["df1", "df2", "df3"])
+
 
 #get_different_rows(df_Life_biomedicine, df02_Life_biomedicine, "usage_plumx")
 
