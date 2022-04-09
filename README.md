@@ -126,10 +126,50 @@ př: disciplinary_and_time_differences(data, indikator, groupby, median_or_mean,
 
 
 
+## get_different_rows(source_df, new_df, sledovany_indikator)
+Vrací řádky ve kterých proběhla změna a současně vypočítá kolik řádků se změnilo
+Na vstupu je původní dataset, nově naměřený dataset po určitém časovém období a určí se sledovaný indikátor, pro který se má sledovat změna.
+(tzn. sledují se pouze změny pro jeden indikátor)
+* Vylepšená verze této funkce je: plot_clustered_stacked(), která umí i grafy.
 
-## zjisti_vlivne_faktory()
+## zjisti_vlivne_faktory(data, indikator, faktor, vizualizace)
+CÍLEM TÉTO FUNKCE JE ZJISTIT ZDALI ZKOUMANÝ FAKTOR NĚJAK OVLIVŇUJE HODNOTU INDIKÁTORU
+př: zda-li počet stránek článku může mít vliv na hodnotu altmetric_score
+* indikátor je závislá proměnná -> indikátor závisí na faktoru
+* faktor je nezávislá proměnná
+FUNKCE NEBYLA NIKDY POUŽITA. ČÁSTEČNĚ FUNGUJE ALE NENÍ DODĚLANÁ
 
-není ještě naprogramováno
+## porovnej_faktory(data, faktor, indikator, test)
+Funkce vypočítá průměry pro indikátor v množině dokumentu kde je zastoupený faktor a zároveň v množině dokumentu, kde faktor není zastoupený.
+Současně počítá i test významnosti. Metoda testu může být buď studentův t-test nebo mann-withney test, případně wilcoxon test.
+Funkce neumí vizualizaci. Funkce funguje na zavolání pouze pro jeden faktor a jeden indikátor. Pro analýzu všech indikátoru, využij funkci "vizualizace_vliv_faktoru_na_hodnotu_indikatoru", která umí i vizualizovat výsledek
+
+## vizualizace_vliv_faktoru_na_hodnotu_indikatoru(df, faktor, typ_grafu, research_area = "")
+Funkce vypočítává průměry pro množinu dokumentu ve kterých je zastoupen sledovaný faktor a pro množinu dokumentu ve kterých faktor chybí. Dál ke každému faktoru vypočte test významnosti, a spočítá počet výskytů a procentuelní nárust/pokles průměrné hodnoty
+Funkce současně umí vykreslit graf - vykresluje dva typy grafu - typ_1 a typ_2
+* typ_1 = jeden barplot, všechno se vešlo do jednoho grafu
+* typ_2 = samostatný barplot pro každý indikátor -> toto je preferovaná verze
+df => poskytnutá data
+faktor => pro který faktor se budou grafy vypočítávat a vykreslovat
+typ_grafu => typ_1 nebo typ_2
+research_area => slouží pouze pro název grafu, jinak není nijak významný
+
+## vizualizace_zmena_hodnot_indikatoru_po_druhem_mereni(data1, data2)
+Vykresluje graf, ze kterého jsou patrné poklesy a nárůsty hodnot indikátorů pro všechny dokumenty.
+Funguje to tak, že se vezme hodnota po druhém měření a odečte se od ní hodnot po prvním měření. Pokud je výsledk 0, tak dokument nezaznamenal změnu, pokud je výsledek >0 tak dokument zaznamenal nárůst, pokud je výsledek <0 tak dokument zaznamenal pokles
+Vykreslují se rozdíly všech dokumentu a jsou seřazené od mínusových rozdílů do nejvíce plusových.
+Na vstupu jsou datasety při prvním a druhém měření. Pro specifickou vědní oblast je nejdříve potřeba datasety vyfiltrovat zvlášť
+
+
+## plot_clustered_stacked(dfall, labels=None, title="",  H="/", **kwargs)
+
+Given a list of dataframes, with identical columns and index, create a clustered stacked bar plot. 
+labels is a list of the names of the dataframe, used for the legend
+title is a string for the title of the plot
+H is the hatch used for identification of the different dataframe  
+Převzato a upraveno: https://stackoverflow.com/questions/22787209/how-to-have-clusters-of-stacked-bars-with-python-pandas
+* Funkce vykresluje graf, který vypovídá o změně hodnot jednotlivých dokumentů pro všechny indikátory. Zaznamenává pokles i nárůst. Celková velikost sloupce znamená kolik % dokumentu zaznamenalo nějakou změnu. 
+
 
 
 
