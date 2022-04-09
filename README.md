@@ -149,10 +149,10 @@ Funkce vypočítává průměry pro množinu dokumentu ve kterých je zastoupen 
 Funkce současně umí vykreslit graf - vykresluje dva typy grafu - typ_1 a typ_2
 * typ_1 = jeden barplot, všechno se vešlo do jednoho grafu
 * typ_2 = samostatný barplot pro každý indikátor -> toto je preferovaná verze
-df => poskytnutá data
-faktor => pro který faktor se budou grafy vypočítávat a vykreslovat
-typ_grafu => typ_1 nebo typ_2
-research_area => slouží pouze pro název grafu, jinak není nijak významný
+- df => poskytnutá data
+- faktor => pro který faktor se budou grafy vypočítávat a vykreslovat
+- typ_grafu => typ_1 nebo typ_2
+- research_area => slouží pouze pro název grafu, jinak není nijak významný
 
 ## vizualizace_zmena_hodnot_indikatoru_po_druhem_mereni(data1, data2)
 Vykresluje graf, ze kterého jsou patrné poklesy a nárůsty hodnot indikátorů pro všechny dokumenty.
