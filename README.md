@@ -170,6 +170,15 @@ H is the hatch used for identification of the different dataframe
 Převzato a upraveno: https://stackoverflow.com/questions/22787209/how-to-have-clusters-of-stacked-bars-with-python-pandas
 * Funkce vykresluje graf, který vypovídá o změně hodnot jednotlivých dokumentů pro všechny indikátory. Zaznamenává pokles i nárůst. Celková velikost sloupce znamená kolik % dokumentu zaznamenalo nějakou změnu. 
 
+### příklad použití:
+#připrav si datasety
+df_social = priprav_df_pro_prirustku_a_ubytku(df_social_sciences, df02_social_sciences)
+df_tech = priprav_df_pro_prirustku_a_ubytku(df_technology, df02_technology)
+df_physic = priprav_df_pro_prirustku_a_ubytku(df_Physical_sciencese, df02_Physical_sciencese)
+df_life = priprav_df_pro_prirustku_a_ubytku(df_Life_biomedicine, df02_Life_biomedicine)
+#pak zavolej toto:
+plot_clustered_stacked([df_social, df_tech, df_physic, df_life],["Social Sciences", "Technology", "Physical Sciences", "Life Sciences & Biomedicine"],title="Podíl dokumentů u kterých byla zaznamenána změna ve sledovaných indikátorech (v %)", H="///")
+
 
 
 
