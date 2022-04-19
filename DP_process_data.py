@@ -525,7 +525,7 @@ def mapovani_vyzkumnych_oblasti(field):
 
 #výstup z této funkce je string odpověď z API. Tento výstup slouží jako vstup pro funkci "zpracovani_api_odpovedi"
 def api_altmetrics_call(doi):
-    api_key="6aef862ef76c485d84f256d75150f486"
+    api_key="" #ADD YOUR OWN KEY
 
     api_url_clanku = "https://api.altmetric.com/v1/doi/" + str(doi) + "?key=" + api_key
     response = requests.get(api_url_clanku)
@@ -558,7 +558,7 @@ def api_altmetrics_call(doi):
 
 
 def api_plumx_call(doi):
-    api_key = "76033570136eefe7414630f354bff245"
+    api_key = "" #ADD YOUR OWN KEY
 
     api_url_clanku = "https://api.elsevier.com/analytics/plumx/doi/" + str(doi) + "?apiKey=" + api_key
 
