@@ -7,7 +7,7 @@ Druhým skriptem je DP_analyze_data.py. Vstup tohoto skriptu je zmíněný CSV s
 Tento program vznikl pro potřeby diplomové práce s názvem "Altmetrie a její využití při hodnocení vědeckého výzkumu".
 Veškerá data, na základě kterých byla vypracována praktická část diplomové práce, jsou dostupné v repozitáři na Zenodo, [DOI:10.5281/zenodo.6435829](https://doi.org/10.5281/zenodo.6435829)
 
-Reference diplomové práce:
+### Reference diplomové práce:
 KVĚT, Jonáš. Altmetrie a její využití při hodnocení vědeckého výzkumu [online]. Praha, 2022 [cit. 2022-05-03]. Diplomová práce. Univerzita Karlova. Filozofická fakulta. Ústav informačních studií a knihovnictví. Vedoucí práce Jan Dvořák.
 
 
