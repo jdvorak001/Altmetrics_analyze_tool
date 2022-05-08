@@ -1,9 +1,15 @@
 # Altmetrics_analyze_tool
 Tool for collecting and analyzing altmetric data
-Tento program vznikl pro potřeby diplomové práce s názvem "Altmetrie a její využití při hodnocení vědeckého výzkumu". 
 
 Program se skládá celkem ze dvou skriptů. Skript s názvem DP_process_data.py v první řadě prochází všechny dodané soubory ve formátu Endnote (.ciw) na jeho vstupní složce. Z těchto souborů extrahuje všechny potřebná data, pokud hledaná informace chybí, program místo ní doplní hodnotu „None“. V druhé řadě tento skript využívá přístupné API rozhraní služby PlumX a Altmetrics.com, na které vznáší požadavky obsahující DOI identifikátor získaný z předtím extrahovaného Endnote souboru. Při pozitivní odpovědi, která je vždy ve fromátu JSON, extrahuje hledaná data. V případě negativní odpovědi je vrácena hodnota „None“. Takto zpracované informace jsou zapsány do CSV souboru, který je výstupem tohoto skriptu (zároveň je výstupem i logfile, který zaznamenává informace o stavu zpracování záznamů). 
 Druhým skriptem je DP_analyze_data.py. Vstup tohoto skriptu je zmíněný CSV soubor, jehož řádky jsou jednotlivé dokumenty a jehož sloupce jsou potřebná metadata dokumentu a současně také jednotlivé sledované identifikátory. Tyto data skript zpracovává a jeho výstupem jsou propočtené tabulky a vykreslené grafy, na jejichž základě byly zodpovězeny výzkumné otázky definované na předchozích stránkách této práce. 
+
+Tento program vznikl pro potřeby diplomové práce s názvem "Altmetrie a její využití při hodnocení vědeckého výzkumu".
+Veškerá data, na základě kterých byla vypracována praktická část diplomové práce, jsou dostupné v repozitáři na Zenodo, [DOI:10.5281/zenodo.6435829](https://doi.org/10.5281/zenodo.6435829)
+
+Reference diplomové práce:
+KVĚT, Jonáš. Altmetrie a její využití při hodnocení vědeckého výzkumu [online]. Praha, 2022 [cit. 2022-05-03]. Diplomová práce. Univerzita Karlova. Filozofická fakulta. Ústav informačních studií a knihovnictví. Vedoucí práce Jan Dvořák.
+
 
 ## Vytvořený program používá následující knihovny:
 ### Pro automatizaci sběru dat:
